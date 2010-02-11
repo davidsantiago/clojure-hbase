@@ -91,7 +91,9 @@ you have to remember what everything was and convert it back yourself.
 Scan objects are a bit different from the other 3. They are created similarly,
 but they will return a ResultScanner that lets you iterate through the scan
 results. Since ResultScanner implements Iterable, you should able to use it
-places where Clojure expects a seq (not yet tested).
+places where Clojure expects a seq (not yet tested). ResultScanners should be 
+.close()'d when they are no longer needed; by using the with-scanner macro
+you can ensure that this is done automatically (not yet tested).
 
 ## Status
 
