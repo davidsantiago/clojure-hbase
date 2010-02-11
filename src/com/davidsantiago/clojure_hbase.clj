@@ -10,6 +10,11 @@
 
 ;(set! *warn-on-reflection* true)
 
+(defvar- put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
+(defvar- get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))
+(defvar- delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
+(defvar- scan-class (Class/forName   "org.apache.hadoop.hbase.client.Scan"))
+
 (defvar- #^HTablePool *db* (HTablePool.)
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
@@ -113,23 +118,25 @@
    results of the query in the corresponding position."
   [#^HTable table & ops]
   (io!
-   (doseq [op ops]
-     (condp instance? op
-       (class Get)   (.get table #^Get op)
-       (class Scan)  (scanner table op)
-       (throw (IllegalArgumentException.
-	       "Arguments must be Get or Scan objects."))))))
+   (map (fn [op]
+	  (condp instance? op
+	    get-class   (.get table #^Get op)
+	    scan-class  (scanner table op)
+	    (throw (IllegalArgumentException.
+		    "Arguments must be Get or Scan objects."))))
+	ops)))
 
 (defn modify
   "Performs the given modifying actions (Put/Delete) on the given HTable."
   [#^HTable table & ops]
   (io!
-   (doseq [op ops]
-     (condp instance? op
-       (class Put)     (.put table #^Put op)
-       (class Delete)  (.delete table #^Delete op)
-       (throw (IllegalArgumentException.
-	       "Arguments must be Put or Delete objects."))))))
+   (map (fn [op]; [op ops]
+	  (condp instance? op
+	    put-class     (.put table #^Put op)
+	    delete-class  (.delete table #^Delete op)
+	    (throw (IllegalArgumentException.
+		    "Arguments must be Put or Delete objects."))))
+	ops)))
 
 (defn- partition-query
   "Given a query sequence and a command argnum map (each keyword in map
