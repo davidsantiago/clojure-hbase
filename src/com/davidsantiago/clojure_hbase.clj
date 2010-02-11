@@ -130,7 +130,7 @@
   "Performs the given modifying actions (Put/Delete) on the given HTable."
   [#^HTable table & ops]
   (io!
-   (map (fn [op]; [op ops]
+   (map (fn [op]
 	  (condp instance? op
 	    put-class     (.put table #^Put op)
 	    delete-class  (.delete table #^Delete op)
