@@ -13,19 +13,19 @@ submitting them for you. Here's an example session:
       (require ['com.davidsantiago.clojure-hbase :as 'hb])
  
       (hb/with-table [users (hb/table "test-users")]
-		     (hb/put! users "testrow" :values [:account [:c1 "test" :c2 "test2"]]))
+		     (hb/put users "testrow" :values [:account [:c1 "test" :c2 "test2"]]))
       nil
 
       (hb/with-table [users (hb/table "test-users")]
-		     (hb/get! users "testrow" :columns [:account [:c1 :c2]]))
+		     (hb/get users "testrow" :columns [:account [:c1 :c2]]))
       #<Result keyvalues={testrow/account:c1/1265871284243/Put/vlen=4, testrow/account:c2/1265871284243/Put/vlen=5}>
 
       (hb/with-table [users (hb/table "test-users")]
-		     (hb/delete! users "testrow" :columns [:account [:c1 :c2]]))
+		     (hb/delete users "testrow" :columns [:account [:c1 :c2]]))
       nil
 
       (hb/with-table [users (hb/table "test-users")]
-		     (hb/get! users "testrow" :columns [:account [:c1 :c2]]))
+		     (hb/get users "testrow" :columns [:account [:c1 :c2]]))
       #<Result keyvalues=NONE>
 
 Creating an HTable object is potentially an expensive operation in HBase, 
@@ -35,16 +35,16 @@ HTablePool to manage tables for you. It's not strictly necessary, but
 surrounding your calls with the with-table statement will ensure that any 
 tables requested in the bindings are returned to the HTablePool at the end of
 the code. This can be manually managed with the table and release-table 
-functions. Of course, a better way to write the above code would have been:
+functions. Perhaps a better way to write the above code would have been:
 
       (hb/with-table [users (hb/table "test-users")]
-         (hb/put! users "testrow" :values [:account [:c1 "test" :c2 "test2"]])
-         (hb/get! users "testrow" :columns [:account [:c1 :c2]])
-         (hb/delete! users "testrow" :columns [:account [:c1 :c2]])
-         (hb/get! users "testrow" :columns [:account [:c1 :c2]]))
+         (hb/put users "testrow" :values [:account [:c1 "test" :c2 "test2"]])
+         (hb/get users "testrow" :columns [:account [:c1 :c2]])
+         (hb/delete users "testrow" :columns [:account [:c1 :c2]])
+         (hb/get users "testrow" :columns [:account [:c1 :c2]]))
       #<Result keyvalues=NONE>
 
-The get!, put!, and delete! functions will take any number of arguments after
+The get, put, and delete functions will take any number of arguments after
 the table and row arguments. Options to the function are keywords followed by
 0 or more arguments, depending on the function. The arguments can be pretty 
 much anything that can be turned into a byte array (see below). For now, see 
@@ -58,9 +58,10 @@ in a vector, as above.
 
 It may sometimes be useful to have access to the raw HBase Get/Put/Delete
 objects, perhaps for interoperability with another library. The functions
-get, put, scan and delete will return those objects without submitting them:
+get*, put*, scan* and delete* will return those objects without submitting 
+them:
 
-      (hb/get "testrow" :column [:account :c1]))
+      (hb/get* "testrow" :column [:account :c1]))
 			#<Get row=testrow, maxVersions=1, timeRange=[0,9223372036854775807), families={(family=account, columns={c1}}>
 
 Note that the table argument is not necessary here. Such objects can be 
@@ -69,7 +70,7 @@ Scan objects) or modify (for Put and Delete objects):
 
       (hb/with-table [users (hb/table "test-users")]
         (hb/modify users 
-          (hb/put "testrow" :value [:account :c1 "test"])))
+          (hb/put* "testrow" :value [:account :c1 "test"])))
       nil
 
 Alternatively, you may have already-created versions of these objects from

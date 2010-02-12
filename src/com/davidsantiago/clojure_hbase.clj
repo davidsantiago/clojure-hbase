@@ -198,7 +198,7 @@
 	(.addColumn get-op (to-bytes family) (to-bytes q)))))
   get-op)
 
-(defn get
+(defn get*
   "Returns a Get object suitable for performing a get on an HTable. To make
    modifications to an existing Get object, pass it as the argument to
    :use-existing; to use an existing RowLock, pass it as the argument to
@@ -222,11 +222,11 @@
 	:time-stamp   (.setTimeStamp get-op (second spec))))
     get-op))
 
-(defn get!
+(defn get
   "Creates and executes a Get object against the given table. Options are
    the same as for get."
   [#^HTable table row & args]
-  (let [g #^Get (apply get row args)]
+  (let [g #^Get (apply get* row args)]
     (io!
      (.get table g))))
 
@@ -271,7 +271,7 @@
 	(put-add put-op family q v))))
   put-op)
 
-(defn put
+(defn put*
   "Returns a Put object suitable for performing a put on an HTable. To make
    modifications to an existing Put object, pass it as the argument to
    :use-existing; to use an existing RowLock, pass it as the argument to
@@ -288,11 +288,11 @@
 	:current-time   (.setTimeStamp put-op HConstants/LATEST_TIMESTAMP)))
     put-op))
 
-(defn put!
+(defn put
   "Creates and executes a Put object against the given table. Options are
    the same as for put."
   [#^HTable table row & args]
-  (let [p #^Put (apply put row args)]
+  (let [p #^Put (apply put* row args)]
     (io!
      (.put table p))))
 
@@ -374,7 +374,7 @@
 	:families (doseq [f (rest spec)]
 		    (delete-family-timestamp delete-op f timestamp))))))
 
-(defn delete
+(defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
    make modifications to an existing Delete object, pass it as the argument to
    :use-existing; to use an existing RowLock, pass it as the argument to
@@ -396,11 +396,11 @@
 				 (delete-family delete-op f))))
     delete-op))
 
-(defn delete!
+(defn delete
   "Creates and executes a Delete object against the given table. Options are
    the same as for delete."
   [#^HTable table row & args]
-  (let [d #^Delete (apply delete row args)]
+  (let [d #^Delete (apply delete* row args)]
     (io!
      (.delete table d))))
 
@@ -434,7 +434,7 @@
       :use-existing (io! (:use-existing cons-opts))
       (Scan.))))
 
-(defn scan
+(defn scan*
   "Returns a Scan object suitable for performing a scan on an HTable. To make
    modifications to an existing Scan object, pass it as the argument to
    :use-existing."
@@ -459,11 +459,11 @@
 	:stop-row     (.setStopRow scan-op (to-bytes (second spec)))))
     scan-op))
 
-(defn scan!
+(defn scan
   "Creates and runs a Scan object. All arguments are the same as scan.
    ResultScanner implements Iterable, so you should be able to just use it
    directly, but don't forget to .close it! Better yet, use with-scanner."
   [#^HTable table & args]
-  (let [s (apply scan args)]
+  (let [s (apply scan* args)]
     (io!
      (scanner table s))))
