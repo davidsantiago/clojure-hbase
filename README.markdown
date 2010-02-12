@@ -58,7 +58,7 @@ in a vector, as above.
 
 It may sometimes be useful to have access to the raw HBase Get/Put/Delete
 objects, perhaps for interoperability with another library. The functions
-get*, put*, scan* and delete* will return those objects without submitting 
+get\*, put\*, scan\* and delete\* will return those objects without submitting 
 them:
 
       (hb/get* "testrow" :column [:account :c1]))
