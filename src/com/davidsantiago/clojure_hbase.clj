@@ -1,5 +1,5 @@
 (ns com.davidsantiago.clojure-hbase
-  (:refer-clojure :exclude [get])
+  (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
 	clojure.contrib.seq-utils
 	clojure.contrib.java-utils)
@@ -46,6 +46,52 @@
   {:tag (Class/forName "[B")}
   [arg]
   (to-bytes-impl arg))
+
+(defn- assoc-in!
+  "Straight re-implementation of assoc-in for transients (at all levels)."
+  [m [k & ks] v]
+  (if ks
+    (assoc! m k (assoc-in! (clojure.core/get m k (transient {})) ks v))
+    (assoc! m k v)))
+
+(defn- rmap
+  "Implementation core for map-at-levels."
+  [func obj lvls lvl]
+  (let [children-mapped (if (coll? obj)
+			  (for [c obj]
+			    (rmap func c lvls (inc lvl)))
+			  obj)]
+    (if (.contains lvls lvl)
+      (func children-mapped)
+      children-mapped)))
+
+(defn map-at-levels
+  "Applies map to a recursive data structure up to the specified level. The
+   collection itself is level 0, and its members are at level 1, etc."
+  [func coll lvls]
+  (rmap func coll lvls 0))
+
+(defn as-map
+  "Extracts the contents of the Result objects and sticks them into a 3-level
+   map, indexed by family, qualifier, and then timestamp."
+  [#^Result result & args]
+  (let [options      (into {} (map vec (partition 2 args)))
+	family-fn    (map-get options :map-family identity)
+	qualifier-fn (map-get options :map-qualifier identity)
+	timestamp-fn (map-get options :map-timestamp identity)
+	value-fn     (map-get options :map-value identity)]
+    (loop [remaining-kvs (seq (.raw result))
+	   kv-map {}]
+      (if-let [kv (first remaining-kvs)]
+	(let [family    (family-fn (.getFamily kv))
+	      qualifier (qualifier-fn (.getQualifier kv))
+	      timestamp (timestamp-fn (.getTimestamp kv))
+	      value     (value-fn (.getValue kv))]
+	  (recur (next remaining-kvs)
+		 (assoc-in kv-map
+			   [family qualifier timestamp]
+			   value)))
+      kv-map))))
 
 (defn scanner
   "Creates a Scanner on the given table using the given Scan."
@@ -149,7 +195,7 @@
     (let [kw (first remaining-commands)]
       (if (nil? kw)
 	result
-	(let [[a-cmd rest-cmds] (split-at (inc (cmd-argnum-map kw))
+	(let [[a-cmd rest-cmds] (split-at (inc (map-get cmd-argnum-map kw 1))
 					  remaining-commands)]
 	  (recur (conj result a-cmd) rest-cmds))))))
 
