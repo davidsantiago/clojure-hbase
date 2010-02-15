@@ -47,30 +47,6 @@
   [arg]
   (to-bytes-impl arg))
 
-(defn- assoc-in!
-  "Straight re-implementation of assoc-in for transients (at all levels)."
-  [m [k & ks] v]
-  (if ks
-    (assoc! m k (assoc-in! (clojure.core/get m k (transient {})) ks v))
-    (assoc! m k v)))
-
-(defn- rmap
-  "Implementation core for map-at-levels."
-  [func obj lvls lvl]
-  (let [children-mapped (if (coll? obj)
-			  (for [c obj]
-			    (rmap func c lvls (inc lvl)))
-			  obj)]
-    (if (.contains lvls lvl)
-      (func children-mapped)
-      children-mapped)))
-
-(defn map-at-levels
-  "Applies map to a recursive data structure up to the specified level. The
-   collection itself is level 0, and its members are at level 1, etc."
-  [func coll lvls]
-  (rmap func coll lvls 0))
-
 (defn as-map
   "Extracts the contents of the Result objects and sticks them into a 3-level
    map, indexed by family, qualifier, and then timestamp."
