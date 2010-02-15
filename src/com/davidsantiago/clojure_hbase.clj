@@ -88,10 +88,26 @@
 	      timestamp (timestamp-fn (.getTimestamp kv))
 	      value     (value-fn (.getValue kv))]
 	  (recur (next remaining-kvs)
-		 (assoc-in kv-map
-			   [family qualifier timestamp]
-			   value)))
+		 (assoc-in kv-map [family qualifier timestamp] value)))
       kv-map))))
+
+(defn as-vector
+  [#^Result result & args]
+  (let [options      (into {} (map vec (partition 2 args)))
+	family-fn    (map-get options :map-family identity)
+	qualifier-fn (map-get options :map-qualifier identity)
+	timestamp-fn (map-get options :map-timestamp identity)
+	value-fn     (map-get options :map-value identity)]
+    (loop [remaining-kvs (seq (.raw result))
+	   kv-vec (transient [])]
+      (if-let [kv (first remaining-kvs)]
+	(let [family    (family-fn (.getFamily kv))
+	      qualifier (qualifier-fn (.getQualifier kv))
+	      timestamp (timestamp-fn (.getTimestamp kv))
+	      value     (value-fn (.getValue kv))]
+	  (recur (next remaining-kvs)
+		 (conj! kv-vec [family qualifier timestamp value])))
+	(persistent! kv-vec)))))
 
 (defn scanner
   "Creates a Scanner on the given table using the given Scan."

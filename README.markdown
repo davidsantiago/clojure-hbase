@@ -96,13 +96,46 @@ places where Clojure expects a seq (not yet tested). ResultScanners should be
 .close()'d when they are no longer needed; by using the with-scanner macro
 you can ensure that this is done automatically (not yet tested).
 
+The Result objects that come out of get and scan requests are not always the
+most convenient to work with. If you'd prefer to deal with the result as a
+set of hierarchical maps, you can use the as-map function to create a map out
+of the result. For example: 
+
+      (hb/with-table [users (hb/table "test-users")]
+						     (hb/get users "testrow" :column [:account :c1]))
+			#<Result keyvalues={testrow/account:c1/1266054048251/Put/vlen=4}>
+			
+can become:
+
+      (hb/with-table [users (hb/table "test-users")]
+						     (hb/as-map (hb/get users "testrow" :column [:account :c1])))
+			{#<byte[] [B@54231c3> {#<byte[] [B@3cd0fbe7> {1266054048251 #<byte[] [B@3c4a19e2>}}}
+			
+The Clojure function get-in can be very useful for pulling what you want out
+of this structure. We can do even better, using the options to as-map, which 
+let you specify a function to map onto each family, qualifier, timestamp, or 
+value as you wish.
+
+      (hb/with-table [users (hb/table "test-users")]
+						     (hb/as-map (hb/get users "testrow" :column [:account :c1]) :map-family #(keyword (Bytes/toString %)) :map-qualifier #(keyword (Bytes/toString %)) :map-timestamp #(java.util.Date. %) :map-value #(Bytes/toString %) str))
+			{:account {:c1 {#<Date Sat Feb 13 03:40:48 CST 2010> "test"}}}
+
+Depending on your use case, you may prefer to have all of the values in the 
+Result as a series of [family qualifier timestamp value] vectors. The function
+as-vector accepts the same arguments and returns a vector, each value of which
+is a vector of the form just mentioned: 
+
+      (hb/with-table [users (hb/table "test-users")]
+			           (hb/as-vector (hb/get users "testrow" :column [:account :c1]) :map-family #(keyword (Bytes/toString %)) :map-qualifier #(keyword (Bytes/toString %)) :map-timestamp #(java.util.Date. %) :map-value #(Bytes/toString %) str))
+      [[:account :c1 #<Date Sat Feb 13 03:40:48 CST 2010> "test"]]
+
 ## Status
 
 Very immature, barely tested. Bug reports and input welcome.
 
 ## Upcoming
 
-* Nice wrapper for Result objects, so they can be treated like maps.
+* Support for the HBase Admin functions.
 * Some sort of unit test situation.
 
 ## License
