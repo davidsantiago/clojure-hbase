@@ -48,7 +48,7 @@
   (to-bytes-impl arg))
 
 (defn as-map
-  "Extracts the contents of the Result objects and sticks them into a 3-level
+  "Extracts the contents of the Result object and sticks them into a 3-level
    map, indexed by family, qualifier, and then timestamp."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
@@ -68,6 +68,9 @@
       kv-map))))
 
 (defn as-vector
+  "Extracts the contents of the Result object and sticks them into a
+   vector tuple of [family qualifier timestamp value]; returns a sequence
+   of such vectors."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
 	family-fn    (map-get options :map-family identity)
