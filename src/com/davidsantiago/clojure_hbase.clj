@@ -337,6 +337,23 @@
     (io!
      (.put table p))))
 
+(defn check-and-put
+  "Atomically checks that the row-family-qualifier-value match the values we
+   give, and if so, executes the Put."
+  ([#^HTable table row family qualifier value #^Put put]
+     (.checkAndPut table (to-bytes row) (to-bytes family) (to-bytes qualifier)
+		   (to-bytes value) put))
+  ([#^HTable table [row family qualifier value] #^Put put]
+     (check-and-put table row family qualifier value put)))
+
+(defn insert
+  "If the family and qualifier are non-existent, the Put will be committed.
+   The row is taken from the Put object, but the family and qualifier cannot
+   be determined from a Put object, so they must be specified."
+  [#^HTable table family qualifier #^Put put]
+     (check-and-put table (.getRow put) family qualifier
+		    (byte-array 0) put))
+
 ;;
 ;; DELETE
 ;;
