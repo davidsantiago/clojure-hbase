@@ -252,7 +252,7 @@
 	:column       (apply #(.addColumn get-op
 					  (to-bytes %1) (to-bytes %2))
 			     (second spec))
-	:columns      (handle-get-columns get-op (rest spec))
+	:columns      (handle-get-columns get-op (second spec))
 	:family       (.addFamily get-op (to-bytes (second spec)))
 	:families     (for [f (second spec)]
 			(.addFamily get-op (to-bytes f)))
@@ -350,9 +350,9 @@
   "If the family and qualifier are non-existent, the Put will be committed.
    The row is taken from the Put object, but the family and qualifier cannot
    be determined from a Put object, so they must be specified."
-  [#^HTable table family qualifier #^Put put]
-     (check-and-put table (.getRow put) family qualifier
-		    (byte-array 0) put))
+  [#^HTable table family qualifier put]
+  (check-and-put table (.getRow put) family qualifier
+		 (byte-array 0) put))
 
 ;;
 ;; DELETE
@@ -504,7 +504,7 @@
 	:column       (apply #(.addColumn scan-op
 					  (to-bytes %1) (to-bytes %2))
 			     (second spec))
-	:columns      (handle-get-columns scan-op (rest spec))
+	:columns      (handle-get-columns scan-op (second spec))
 	:family       (.addFamily scan-op (to-bytes (second spec)))
 	:families     (for [f (second spec)]
 			(.addFamily scan-op (to-bytes f)))
