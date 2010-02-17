@@ -133,9 +133,12 @@ is a vector of the form just mentioned:
 
 Very immature, barely tested. Bug reports and input welcome.
 
+## Lately...
+
+Added a first cut at most of the Admin functions. Untested so far.
+
 ## Upcoming
 
-* Support for the HBase Admin functions.
 * Some sort of unit test situation.
 
 ## License
