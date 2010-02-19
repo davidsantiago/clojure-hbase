@@ -1,4 +1,4 @@
-(defproject clojure-hbase "1.0.0-SNAPSHOT"
+(defproject clojure-hbase "0.20.0"
   :description "A convenient Clojure interface to HBase."
   :dependencies [[org.clojure/clojure "1.1.0"]
 		 [org.clojure/clojure-contrib "1.1.0-master-SNAPSHOT"]
