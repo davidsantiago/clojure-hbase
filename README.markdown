@@ -92,9 +92,9 @@ you have to remember what everything was and convert it back yourself.
 Scan objects are a bit different from the other 3. They are created similarly,
 but they will return a ResultScanner that lets you iterate through the scan
 results. Since ResultScanner implements Iterable, you should able to use it
-places where Clojure expects a seq (not yet tested). ResultScanners should be 
+places where Clojure expects one (ie, seq). ResultScanners should be 
 .close()'d when they are no longer needed; by using the with-scanner macro
-you can ensure that this is done automatically (not yet tested).
+you can ensure that this is done automatically.
 
 The Result objects that come out of get and scan requests are not always the
 most convenient to work with. If you'd prefer to deal with the result as a
@@ -131,15 +131,12 @@ is a vector of the form just mentioned:
 
 ## Status
 
-Very immature, barely tested. Bug reports and input welcome.
+Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
 ## Lately...
 
-Added a first cut at most of the Admin functions. Untested so far.
-
-## Upcoming
-
-* Some sort of unit test situation.
+Added basic unit tests.
+Added a first cut at most of the Admin functions.
 
 ## License
 
