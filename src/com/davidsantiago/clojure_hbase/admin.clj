@@ -101,7 +101,7 @@
 
 (defn disable-table
   [table-name]
-  (.disable-table *admin* (to-bytes table-name)))
+  (.disableTable *admin* (to-bytes table-name)))
 
 (defn enable-table
   [table-name]

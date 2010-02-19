@@ -471,9 +471,9 @@
 (defn- make-scan
   [options]
   (let [directives #{:use-existing}
-	cons-opts (hash-map (flatten (filter
-				      #(contains? directives (first %))
-				      options)))]
+	cons-opts (apply hash-map (flatten (filter
+					    #(contains? directives (first %))
+					    options)))]
     (condp contains? cons-opts
       :use-existing (io! (:use-existing cons-opts))
       (Scan.))))
