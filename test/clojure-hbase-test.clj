@@ -85,6 +85,7 @@
        (is (= true
 	      (reduce #(and %1 %2)
 		      (with-scanner [scan-results (scan test-tbl)]
-			  (map #(and (= (first %1)
-					(Bytes/toString (.getRow %2))))
-			       scan-row-values scan-results)))))))))
+			  (map #(= (first %1)
+				   (Bytes/toString (.getRow %2)))
+			       scan-row-values (seq scan-results))))))))))
+
