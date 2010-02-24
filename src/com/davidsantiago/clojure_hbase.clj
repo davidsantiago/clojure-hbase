@@ -66,7 +66,33 @@
 	      value     (value-fn (.getValue kv))]
 	  (recur (next remaining-kvs)
 		 (assoc-in kv-map [family qualifier timestamp] value)))
-      kv-map))))
+	kv-map))))
+
+(defn latest-as-map
+  "Extracts the contents of the Result object and sticks them into a 2-level
+   map, indexed by family and qualifier. The latest timestamp is used."
+  [#^Result result & args]
+  (let [options      (into {} (map vec (partition 2 args)))
+	family-fn    (map-get options :map-family identity)
+	qualifier-fn (map-get options :map-qualifier identity)
+	value-fn     (map-get options :map-value identity)]
+    (loop [remaining-kvs (seq (.raw result))
+	   keys #{}]
+      (if-let [kv (first remaining-kvs)]
+	(let [family    (.getFamily kv)
+	      qualifier (.getQualifier kv)]
+	  (recur (next remaining-kvs)
+		 (conj keys [family qualifier])))
+	;; At this point, we have a duplicate-less list of [f q] keys in keys.
+	;; Go back through, pulling the latest values for these keys.
+	(loop [remaining-keys keys
+	       kv-map {}]
+	  (if-let [[family qualifier] (first remaining-keys)]
+	    (recur (next remaining-keys)
+		   (assoc-in kv-map [(family-fn family)
+				     (qualifier-fn qualifier)]
+			     (value-fn (.getValue result family qualifier))))
+	    kv-map))))))
 
 (defn as-vector
   "Extracts the contents of the Result object and sticks them into a
