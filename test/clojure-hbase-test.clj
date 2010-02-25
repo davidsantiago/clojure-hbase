@@ -89,3 +89,27 @@
 				   (Bytes/toString (.getRow %2)))
 			       scan-row-values (seq scan-results))))))))))
 
+(deftest as-map-test
+  (let [cf-name "test-cf-name"
+	qual    "testqual"
+	row     "testrow"
+	value   "testval"]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :time-stamp 1 :value [cf-name qual value])
+       (is (= {cf-name {qual {"1" value}}}
+	      (as-map (get test-tbl row)
+			       :map-family    #(Bytes/toString %)
+			       :map-qualifier #(Bytes/toString %)
+			       :map-timestamp str
+			       :map-value     #(Bytes/toString %)))
+	   "as-map works.")
+       (is (= {cf-name {qual value}}
+	      (latest-as-map (get test-tbl row)
+			     :map-family    #(Bytes/toString %)
+			     :map-qualifier #(Bytes/toString %)
+			     :map-value     #(Bytes/toString %)))
+	   "latest-as-map works.")))))
