@@ -1,4 +1,4 @@
-(ns com.davidsantiago.clojure-hbase.util
+(ns com.davidsantiago.clojure-hbase.internal
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def))
 

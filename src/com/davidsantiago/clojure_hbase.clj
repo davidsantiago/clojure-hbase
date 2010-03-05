@@ -3,7 +3,7 @@
   (:use clojure.contrib.def
 	clojure.contrib.seq-utils
 	clojure.contrib.java-utils
-	com.davidsantiago.clojure-hbase.util)
+	com.davidsantiago.clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
 	   [org.apache.hadoop.hbase.client HTable
 	    HTablePool Get Put Delete Scan Result RowLock]
