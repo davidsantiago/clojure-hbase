@@ -135,6 +135,13 @@ Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
 ## Lately...
 
+- Added some utility functions for converting hbase output back into usable objects.
+- Added multimethods to to-bytes so that lists, maps, and vector can be easily inserted
+  into and converted back from hbase.
+- Added the :map-default keyword option for as-map, latest-as-map, and as-vector. Makes it
+  easier to give those options; the more specific keywords override the default.
+- Added unit tests for new utility functions.
+
 Added basic unit tests.
 Added a first cut at most of the Admin functions.
 
