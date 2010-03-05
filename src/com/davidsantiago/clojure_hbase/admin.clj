@@ -2,7 +2,7 @@
   (:refer-clojure :rename {get map-get} :exclude [flush])
   (:use clojure.contrib.def
 	com.davidsantiago.clojure-hbase
-	com.davidsantiago.clojure-hbase.util)
+	com.davidsantiago.clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants
 	    HTableDescriptor HColumnDescriptor]
 	   [org.apache.hadoop.hbase.client HBaseAdmin]
