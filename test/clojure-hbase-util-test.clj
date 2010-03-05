@@ -8,3 +8,8 @@
   (is (= "test" (as-str (Bytes/toBytes "test"))))
   (is (= :test (as-kw (Bytes/toBytes "test"))))
   (is (= 'test (as-sym (Bytes/toBytes "test")))))
+
+(deftest check-obj-converters
+  (is (= '(1 2 3) (as-obj (to-bytes '(1 2 3)))))
+  (is (= [1 2 3]) (as-obj (to-bytes [1 2 3])))
+  (is (= {:test '(1 2 3)} (as-obj (to-bytes {:test '(1 2 3)})))))

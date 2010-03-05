@@ -36,6 +36,15 @@
 (defmethod to-bytes-impl clojure.lang.Symbol
   [arg]
   (Bytes/toBytes (as-str arg)))
+(defmethod to-bytes-impl clojure.lang.IPersistentList
+  [arg]
+  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+(defmethod to-bytes-impl clojure.lang.IPersistentVector
+  [arg]
+  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+(defmethod to-bytes-impl clojure.lang.IPersistentMap
+  [arg]
+  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
