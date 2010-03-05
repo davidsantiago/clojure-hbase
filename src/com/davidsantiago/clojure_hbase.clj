@@ -50,13 +50,18 @@
 
 (defn as-map
   "Extracts the contents of the Result object and sticks them into a 3-level
-   map, indexed by family, qualifier, and then timestamp."
+   map, indexed by family, qualifier, and then timestamp.
+
+   Functions can be passed in with arguments :map-family, :map-qualifier,
+   :map-timestamp, and :map-value. You can also use :map-default to pick a
+   default function, which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	family-fn    (map-get options :map-family identity)
-	qualifier-fn (map-get options :map-qualifier identity)
-	timestamp-fn (map-get options :map-timestamp identity)
-	value-fn     (map-get options :map-value identity)]
+	default-fn   (map-get options :map-default identity)
+	family-fn    (map-get options :map-family default-fn)
+	qualifier-fn (map-get options :map-qualifier default-fn)
+	timestamp-fn (map-get options :map-timestamp default-fn)
+	value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
 	   kv-map {}]
       (if-let [kv (first remaining-kvs)]
@@ -70,12 +75,17 @@
 
 (defn latest-as-map
   "Extracts the contents of the Result object and sticks them into a 2-level
-   map, indexed by family and qualifier. The latest timestamp is used."
+   map, indexed by family and qualifier. The latest timestamp is used.
+
+   Functions can be passed in with arguments :map-family, :map-qualifier,
+   and :map-value. You can also use :map-default to pick a default function,
+   which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	family-fn    (map-get options :map-family identity)
-	qualifier-fn (map-get options :map-qualifier identity)
-	value-fn     (map-get options :map-value identity)]
+	default-fn   (map-get options :map-default identity)
+	family-fn    (map-get options :map-family default-fn)
+	qualifier-fn (map-get options :map-qualifier default-fn)
+	value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
 	   keys #{}]
       (if-let [kv (first remaining-kvs)]
@@ -97,13 +107,18 @@
 (defn as-vector
   "Extracts the contents of the Result object and sticks them into a
    vector tuple of [family qualifier timestamp value]; returns a sequence
-   of such vectors."
+   of such vectors.
+
+   Functions can be passed in with arguments :map-family, :map-qualifier,
+   :map-timestamp, and :map-value. You can also use :map-default to pick a
+   default function, which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	family-fn    (map-get options :map-family identity)
-	qualifier-fn (map-get options :map-qualifier identity)
-	timestamp-fn (map-get options :map-timestamp identity)
-	value-fn     (map-get options :map-value identity)]
+	default-fn   (map-get options :map-default identity)
+	family-fn    (map-get options :map-family default-fn)
+	qualifier-fn (map-get options :map-qualifier default-fn)
+	timestamp-fn (map-get options :map-timestamp default-fn)
+	value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
 	   kv-vec (transient [])]
       (if-let [kv (first remaining-kvs)]
