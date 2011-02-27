@@ -39,17 +39,17 @@ table named :users.  Gets and scans return a "family map" for each row
 that consists of a dictionary of family names to maps where each
 map consists of the keys and values for that family.
 
-   (client/put :users 100 {:userinfo {:name "Test User" :id "21412"}})
-   (client/get :users 100) => {:userinfo {:name "Test User" :id "21412"}}
+    (client/put :users 100 {:userinfo {:name "Test User" :id "21412"}})
+    (client/get :users 100) => {:userinfo {:name "Test User" :id "21412"}}
 
 Additional commands are straightforward
 
-   (client/del :users 100) => fmap
-   (client/get-multi :users [100 101 102]) => [fmap fmap fmap]
-   (client/put-multi :users [[100 fmap] [200 fmap]]) 
-   (client/scan (fn [id fmap] fmap) :users) => [fmap, fmap, ...]
-   (client/do-scan (fn [id fmap] fmap) :users) => [fmap, fmap, ...]
-   (client/raw-scan (fn [id fmap] fmap) :users) => [ResultSet, ...]
+    (client/del :users 100) => fmap
+    (client/get-multi :users [100 101 102]) => [fmap fmap fmap]
+    (client/put-multi :users [[100 fmap] [200 fmap]]) 
+    (client/scan (fn [id fmap] fmap) :users) => [fmap, fmap, ...]
+    (client/do-scan (fn [id fmap] fmap) :users) => [fmap, fmap, ...]
+    (client/raw-scan (fn [id fmap] fmap) :users) => [ResultSet, ...]
 
 ### Constraints 
 
@@ -70,11 +70,12 @@ or filter objects necessary to satisfy them.
 (f/constraints) will create an empty constraint object.
 
 The Constraint protocol supports three methods: 
-  * (project type data)
-  * (filter type comparison value)
-  * (page size)
 
-For example, get uers restricted to the :userinfo family
+* (project type data)
+* (filter type comparison value)
+* (page size)
+
+For example, to get users restricted to the :userinfo family
 
     (client/get :users <id> (-> (f/constraints) 
                                 (f/project :families [:userinfo])))
@@ -91,10 +92,12 @@ Similar to ClojureQL, constraints can be made and are not materialized until
 the get or scan command is actually started, meaning we can store
 constraints in vars or have functions that define a set of constraints
 and then compose them later.  There are also two convenience functions for
-composing filter expressions. 
+composing these higher order constraint expressions.
 
     (make-constraints expr1 expr2 ...) and 
     (add-constraints constraints expr1 expr2 ...)
+
+So we can now easily define appropriate variables and functions
 
     (def userinfo (make-constraints
                     (f/project :families [:userinfo])))
@@ -102,15 +105,21 @@ composing filter expressions.
     (defn filter-user-name-prefix [c comp prefix]
       (add-constraints c (f/filter :qualifier [:prefix comp] [:userinfo :name prefix])))
 
+And then apply them interactively or programmatically to perform scans.
+
     (client/scan (fn [a b] b) :users (filter-user-name-prefix userinfo :< "b"))
 
-Projection types include:
-  * :families - Restrict results to one or more families
-  * :columns - Restrict row results to a matching family + qualifier
-  * :row-range - Restrict scan to a range of row values (f/project :row-range [low high])
-  * :timestamp - Only return values for the given long timestamp
-  * :timerange - Return values for the given low / high timestamps
-  * :max-versions - The maximum number of versions of any qualifier+value to return
+The currently support projection types include:
+
+* :families - Restrict results to one or more families
+* :columns - Restrict row results to a matching family + qualifier
+* :row-range - Restrict scan to a range of row values (f/project :row-range [low high])
+* :timestamp - Only return values for the given long timestamp
+* :timerange - Return values for the given low / high timestamps
+* :max-versions - The maximum number of versions of any qualifier+value to return
+
+It is fairly trivial to add new projections or filters; please feel
+free to send patches.
 
 Two utility functions make dealing with time ranges easier, (timestamp
 ref), (timestamp-now) and (timestamp-ago reference type amount).
@@ -121,11 +130,11 @@ arguments.  This makes it easy then to say things like:
 
 Scan from two days ago until now:
 
-    (f/project constraints :timerange [[:days 2] :now])
+     (f/project constraints :timerange [[:days 2] :now])
 
 Or from 1 month before ref, a long-valued reference timestamp.
 
-    (f/project constraints :timerange [[ref :months 1] ref] - 
+     (f/project constraints :timerange [[ref :months 1] ref] - 
 
 Filter expressions all include a comparison expression.  Typically
 you'll use :=, but you can use a variety of comparison types {:binary
@@ -137,19 +146,20 @@ doing a scan operation, this will touch every row in the table which
 can take quite a bit of time.
 
 Filter types include:
-  * (f/filter :row <compare> <value>) - Filter rows by value comparison
-  * (f/filter :qualifier <compare> [<family> <name>]) - Passes all qualifier names in the given family where (<compare> qualifier <name>) is true
-  * (f/filter :column <compare> [<family> <qualifier> <value>]) - Pass all columns where the value comparison is true
-  * (f/filter :cell <compare> [<value> <type>]) - Pass all qualifier-value pairs where the value matches <value>.
-  * (f/filter :keys-only <ignored>) - Only return the qualifiers, no values
-  * (f/filter :first-kv-only <ignored> - Only return the first qualifier-value pair (good for getting matching rows without returning much data
-  * (f/filter :limit <size>) - Only return <size> rows using PageFilter.
+
+* (f/filter :row <compare> <value>) - Filter rows by value comparison
+* (f/filter :qualifier <compare> [<family> <name>]) - Passes all qualifier names in the given family where (<compare> qualifier <name>) is true
+* (f/filter :column <compare> [<family> <qualifier> <value>]) - Pass all columns where the value comparison is true
+* (f/filter :cell <compare> [<value> <type>]) - Pass all qualifier-value pairs where the value matches <value>.
+* (f/filter :keys-only <ignored>) - Only return the qualifiers, no values
+* (f/filter :first-kv-only <ignored> - Only return the first qualifier-value pair (good for getting matching rows without returning much data
+* (f/filter :limit <size>) - Only return <size> rows using PageFilter.
 
 There are some compositional semantics missing, such as ignoring rows
 where certain columns don't match, rather than filtering just
 key-value pairs.  This will be addressed in a later revision.
 
-## Main API Usage
+## Original API Usage
 
 HBase supports four main operations: Get, Put, Delete, and Scan. The API is 
 based around creating objects of the same name, and then submitting those to 
