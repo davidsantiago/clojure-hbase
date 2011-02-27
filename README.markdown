@@ -77,7 +77,7 @@ The Constraint protocol supports three methods:
 
 For example, to get users restricted to the :userinfo family
 
-    (client/get :users <id> (-> (f/constraints) 
+    (client/get :users &lt;id> (-> (f/constraints) 
                                 (f/project :families [:userinfo])))
 
 To return the userinfo data for all users with a name starting with
@@ -134,7 +134,7 @@ Scan from two days ago until now:
 
 Or from 1 month before ref, a long-valued reference timestamp.
 
-     (f/project constraints :timerange [[ref :months 1] ref] - 
+     (f/project constraints :timerange [[ref :months 1] ref])
 
 Filter expressions all include a comparison expression.  Typically
 you'll use :=, but you can use a variety of comparison types {:binary
@@ -147,13 +147,13 @@ can take quite a bit of time.
 
 Filter types include:
 
-* (f/filter :row <compare> <value>) - Filter rows by value comparison
-* (f/filter :qualifier <compare> [<family> <name>]) - Passes all qualifier names in the given family where (<compare> qualifier <name>) is true
-* (f/filter :column <compare> [<family> <qualifier> <value>]) - Pass all columns where the value comparison is true
-* (f/filter :cell <compare> [<value> <type>]) - Pass all qualifier-value pairs where the value matches <value>.
-* (f/filter :keys-only <ignored>) - Only return the qualifiers, no values
-* (f/filter :first-kv-only <ignored> - Only return the first qualifier-value pair (good for getting matching rows without returning much data
-* (f/filter :limit <size>) - Only return <size> rows using PageFilter.
+* (f/filter :row &lt;compare> &lt;value>) - Filter rows by value comparison
+* (f/filter :qualifier &lt;compare> [&lt;family> &lt;name>]) - Passes all qualifier names in the given family where (&lt;compare> qualifier &lt;name>) is true
+* (f/filter :column &lt;compare> [&lt;family> &lt;qualifier> &lt;value>]) - Pass all columns where the value comparison is true
+* (f/filter :cell &lt;compare> [&lt;value> &lt;type>]) - Pass all qualifier-value pairs where the value matches &lt;value>.
+* (f/filter :keys-only &lt;ignored>) - Only return the qualifiers, no values
+* (f/filter :first-kv-only &lt;ignored> - Only return the first qualifier-value pair (good for getting matching rows without returning much data
+* (f/filter :limit &lt;size>) - Only return &lt;size> rows using PageFilter.
 
 There are some compositional semantics missing, such as ignoring rows
 where certain columns don't match, rather than filtering just
