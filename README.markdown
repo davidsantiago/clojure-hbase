@@ -132,8 +132,17 @@ doing a scan operation, this will touch every row in the table which
 can take quite a bit of time.
 
 Filter types include:
-  - :row - Filter rows matching. 
-  - :row-range - Filter rows 
+  - (f/filter :row <compare> <value>) - Filter rows by value comparison
+  - (f/filter :qualifier <compare> [<family> <name>]) - Passes all qualifier names in the given family where (<compare> qualifier <name>) is true
+  - (f/filter :column <compare> [<family> <qualifier> <value>]) - Pass all columns where the value comparison is true
+  - (f/filter :cell <compare> [<value> <type>]) - Pass all qualifier-value pairs where the value matches <value>.
+  - (f/filter :keys-only <ignored>) - Only return the qualifiers, no values
+  - (f/filter :first-kv-only <ignored> - Only return the first qualifier-value pair (good for getting matching rows without returning much data
+  - (f/filter :limit <size>) - Only return <size> rows using PageFilter.
+
+There are some compositional semantics missing, such as ignoring rows
+where certain columns don't match, rather than filtering just
+key-value pairs.  This will be addressed in a later revision.
 
 ## Main API Usage
 
