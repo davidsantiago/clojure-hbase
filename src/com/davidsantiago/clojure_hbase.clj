@@ -1,7 +1,6 @@
 (ns com.davidsantiago.clojure-hbase
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
-	clojure.contrib.seq-utils
 	clojure.contrib.java-utils
 	com.davidsantiago.clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
@@ -164,8 +163,7 @@
    created in this way (use the function table) will automatically be returned
    to the HTablePool when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings) (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
@@ -181,8 +179,7 @@
    created in this way (use the function scanner or scan!) will automatically
    be closed when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings) (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
