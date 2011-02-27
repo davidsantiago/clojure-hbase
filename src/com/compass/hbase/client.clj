@@ -1,4 +1,5 @@
 (ns com.compass.hbase.client
+  (:refer-clojure :exclude [get])
   (:use [clojure.contrib.seq-utils :only [find-first]]
 	clojure.contrib.java-utils
 	clojure.contrib.def

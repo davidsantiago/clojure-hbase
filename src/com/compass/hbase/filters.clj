@@ -1,5 +1,5 @@
 (ns com.compass.hbase.filters
-  (:refer-clojure :exclude [filter get])
+  (:refer-clojure :exclude [filter])
   (:use clojure.contrib.def
 	com.compass.hbase.schema)
   (:require [clj-time.core :as time])
