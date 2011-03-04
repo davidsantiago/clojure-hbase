@@ -25,7 +25,7 @@
 ;; Tables
 ;; ====================================
 
-(defvar- *db* (atom nil)
+(defvar- *db* (atom nil))
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
    nor the use of multiple databases simultaneously (configuration is driven by
@@ -183,13 +183,11 @@
    [[family col value] [family col value] ...].  Performs a single
    batch of actions using a fixed thread pool."
   [table records]
-  (let [schema (table-schema table)
-        puts (make-puts schema records)
-	results (map (partial decode-latest schema)
-		     (process-batch table puts))]
-    (release-table table)
-    results))
-
+  (with-table [table table] 
+    (let [schema (table-schema table)
+	  puts (make-puts schema records)]
+      (map (partial decode-latest schema)
+	   (process-batch table puts))]))
 
 (defn make-gets
   [table schema records]
@@ -204,10 +202,11 @@
   "Similar to put multi, except the input records are [[row <options>] ...]
    where <options> is a flat list of keyvalue pairs suitable to pass to make-get"
   [table records]
-  (let [schema (table-schema table)
-	gets (make-gets table schema records)]
-    (map (partial decode-latest schema)
-	 (process-batch table gets))))
+  (with-table [table table]
+    (let [schema (table-schema table)
+	  gets (make-gets table schema records)]
+      (map (partial decode-latest schema)
+	   (process-batch table gets)))))
 	
 ;; ==================================
 ;; Scanning

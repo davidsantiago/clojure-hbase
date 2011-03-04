@@ -14,7 +14,7 @@
 						    com.sun.jmx/jmxri]]
 		 [commons-logging/commons-logging "1.0.4"]]
   :dev-dependencies [[swank-clojure/swank-clojure "1.3.0-SNAPSHOT"]]
-  :resources-path "./"
+;;  :resources-path "./"
   :repositories {"compass" "http://build.compasslabs.com/maven/content/groups/all"})
 
 (ns leiningen.docs)

@@ -9,7 +9,14 @@
 	   [org.apache.hadoop.hbase.util Bytes]
 	   [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(defvar- *admin* (HBaseAdmin. (HBaseConfiguration.)))
+(defvar- *admin* nil)
+
+(defn get-admin
+  "Enforce a lazy create-once policy"
+  []
+  (if-let [admin @*admin*] admin
+	  (alter-var-root *admin* (fn [old] (if old old
+						(HBaseAdmin. (HBaseConfiguration.)))))))
 
 ;;
 ;; HColumnDescriptor
@@ -73,7 +80,7 @@
 
 (defn add-column-family
   [table-name column-descriptor]
-  (.addColumn *admin* (to-bytes table-name) column-descriptor))
+  (.addColumn (get-admin) (to-bytes table-name) column-descriptor))
 
 (defn hbase-available?
   []
@@ -81,93 +88,93 @@
 
 (defn compact
   [table-or-region-name]
-  (.compact *admin* (to-bytes table-or-region-name)))
+  (.compact (get-admin) (to-bytes table-or-region-name)))
 
 (defn create-table
   [table-descriptor]
-  (.createTable *admin* table-descriptor))
+  (.createTable (get-admin) table-descriptor))
 
 (defn create-table-async
   [table-descriptor]
-  (.createTableAsync *admin* table-descriptor))
+  (.createTableAsync (get-admin) table-descriptor))
 
 (defn delete-column-family
   [table-name column-name]
-  (.deleteColumn *admin* (to-bytes table-name) (to-bytes column-name)))
+  (.deleteColumn (get-admin) (to-bytes table-name) (to-bytes column-name)))
 
 (defn delete-table
   [table-name]
-  (.deleteTable *admin* (to-bytes table-name)))
+  (.deleteTable (get-admin) (to-bytes table-name)))
 
 (defn disable-table
   [table-name]
-  (.disableTable *admin* (to-bytes table-name)))
+  (.disableTable (get-admin) (to-bytes table-name)))
 
 (defn enable-table
   [table-name]
-  (.enableTable *admin* (to-bytes table-name)))
+  (.enableTable (get-admin) (to-bytes table-name)))
 
 (defn flush
   [table-or-region-name]
-  (.flush *admin* (to-bytes table-or-region-name)))
+  (.flush (get-admin) (to-bytes table-or-region-name)))
 
 (defn cluster-status
   []
-  (.getClusterStatus *admin*))
+  (.getClusterStatus (get-admin)))
 
 (defn get-connection
   []
-  (.getConnection *admin*))
+  (.getConnection (get-admin)))
 
 (defn get-master
   []
-  (.getMaster *admin*))
+  (.getMaster (get-admin)))
 
 (defn get-table-descriptor
   [table-name]
-  (.getTableDescriptor *admin* (to-bytes table-name)))
+  (.getTableDescriptor (get-admin) (to-bytes table-name)))
 
 (defn master-running?
   []
-  (.isMasterRunning *admin*))
+  (.isMasterRunning (get-admin)))
 
 (defn table-available?
   [table-name]
-  (.isTableAvailable *admin* (to-bytes table-name)))
+  (.isTableAvailable (get-admin) (to-bytes table-name)))
 
 (defn table-disabled?
   [table-name]
-  (.isTableDisabled *admin* (to-bytes table-name)))
+  (.isTableDisabled (get-admin) (to-bytes table-name)))
 
 (defn table-enabled?
   [table-name]
-  (.isTableEnabled *admin* (to-bytes table-name)))
+  (.isTableEnabled (get-admin) (to-bytes table-name)))
 
 (defn list-tables
   []
-  (seq (.listTables *admin*)))
+  (seq (.listTables (get-admin))))
 
 (defn major-compact
   [table-or-region-name]
-  (.majorCompact *admin* (to-bytes table-or-region-name)))
+  (.majorCompact (get-admin) (to-bytes table-or-region-name)))
 
 (defn modify-column-family
   [table-name column-name column-descriptor]
-  (.modifyColumn *admin* (to-bytes table-name) (to-bytes column-name)
+  (.modifyColumn (get-admin) (to-bytes table-name) (to-bytes column-name)
 		 column-descriptor))
 
 (defn modify-table
   [table-name table-descriptor]
-  (.modifyTable *admin* (to-bytes table-name) table-descriptor))
+  (.modifyTable (get-admin) (to-bytes table-name) table-descriptor))
 
 (defn shutdown
   []
-  (.shutdown *admin*))
+  (.shutdown (get-admin)))
 
 (defn split
   [table-or-region-name]
-  (.split *admin* (to-bytes table-or-region-name)))
+  (.split (get-admin) (to-bytes table-or-region-name)))
 
 (defn table-exists?
   [table-name]
-  (.tableExists *admin* (to-bytes table-name)))
+  (.tableExists (get-admin) (to-bytes table-name)))
