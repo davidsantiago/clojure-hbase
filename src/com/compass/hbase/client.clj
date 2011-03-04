@@ -34,7 +34,7 @@
 (defn table-pool []
   (if-let [pool @*db*]
     pool
-    (swap! *db* #(HTablePool.))))
+    (swap! *db* (fn [_] (HTablePool.)))))
 
 (defn table
   "Gets an HTable from the open HTablePool by name."
