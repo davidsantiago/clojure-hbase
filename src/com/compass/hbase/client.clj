@@ -183,11 +183,10 @@
    [[family col value] [family col value] ...].  Performs a single
    batch of actions using a fixed thread pool."
   [table records]
-  (with-table [table table] 
-    (let [schema (table-schema table)
-	  puts (make-puts schema records)]
-      (map (partial decode-latest schema)
-	   (process-batch table puts)))))
+  (let [schema (table-schema table)
+	puts (make-puts schema records)]
+    (map (partial decode-latest schema)
+	 (process-batch table puts))))
 
 (defn make-gets
   [table schema records]
@@ -202,11 +201,10 @@
   "Similar to put multi, except the input records are [[row <options>] ...]
    where <options> is a flat list of keyvalue pairs suitable to pass to make-get"
   [table records]
-  (with-table [table table]
-    (let [schema (table-schema table)
-	  gets (make-gets table schema records)]
-      (map (partial decode-latest schema)
-	   (process-batch table gets)))))
+  (let [schema (table-schema table)
+	gets (make-gets table schema records)]
+    (map (partial decode-latest schema)
+	 (process-batch table gets))))
 	
 ;; ==================================
 ;; Scanning
