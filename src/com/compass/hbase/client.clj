@@ -25,16 +25,16 @@
 ;; Tables
 ;; ====================================
 
-(defvar- *db* (atom nil))
+(defvar- *db* (atom nil)
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
    nor the use of multiple databases simultaneously (configuration is driven by
-   the XML config files). So we just hide this detail from the user.")
+   the XML config files). So we just hide this detail from the user.)")
 
 (defn table-pool []
   (if-let [pool @*db*]
     pool
-    (swap! *db* (fn [_] (HTablePool.)))))
+    (swap! *db* #(HTablePool.))))
 
 (defn table
   "Gets an HTable from the open HTablePool by name."
@@ -187,7 +187,7 @@
     (let [schema (table-schema table)
 	  puts (make-puts schema records)]
       (map (partial decode-latest schema)
-	   (process-batch table puts))]))
+	   (process-batch table puts)))))
 
 (defn make-gets
   [table schema records]
