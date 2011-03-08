@@ -133,13 +133,36 @@
 (defn make-del [schema row]
   (Delete. (encode-row schema row)))
 
-(defn del
-  "Remove a row"
-  [table row]
+(defn add-del-family [del schema family]
+  (doto del
+    (.deleteFamily (encode-family schema family))))
+
+(defn add-del-column [del schema family column]
+  (doto del
+    (.deleteColumns (encode-family schema family)
+		    (encode-column schema family column))))
+
+(defn do-del [table del]
   (with-table [table table]
-    (let [schema (table-schema table)
-	  d (make-del schema row)]
-      (io! (.delete table d)))))
+    (io! (.delete table del))))
+
+(defn del
+  "Directly delete all or part of a row (all versions)"
+  ([table row]
+     (with-table [table table]
+       (let [schema (table-schema table)]
+	 (do-del table (make-del schema row)))))
+  ([table row family]
+     (with-table [table table]
+       (let [schema (table-schema table)]
+	 (do-del table (-> (make-del schema row)
+			   (add-del-family schema family))))))
+  ([table row family column]
+     (with-table [table table]
+       (let [schema (table-schema table)]
+	 (do-del table (-> (make-del schema row)
+			   (add-del-column schema family column)))))))
+
 
 ;; =========================================
 ;; Multi Row Get / Put operations
@@ -189,22 +212,33 @@
 	 (process-batch table puts))))
 
 (defn make-gets
-  [table schema records]
-  (doall
-   (map (fn [rec]
-	  (if (sequential? rec)
-	    (make-get table schema (first rec) (second rec))
-	    (make-get table schema rec nil)))
-	records)))
+  ([table schema records]
+     (doall
+      (map (fn [rec]
+	     (if (sequential? rec)
+	       (make-get table schema (first rec) (second rec))
+	       (make-get table schema rec nil)))
+	   records)))
+  ([table schema records constraints]
+     (doall
+      (map (fn [rec]
+	     (make-get table schema rec constraints))
+	   records))))
 
 (defn get-multi
   "Similar to put multi, except the input records are [[row <options>] ...]
    where <options> is a flat list of keyvalue pairs suitable to pass to make-get"
-  [table records]
-  (let [schema (table-schema table)
-	gets (make-gets table schema records)]
-    (map (partial decode-latest schema)
-	 (process-batch table gets))))
+  ([table records]
+     (let [schema (table-schema table)
+	   gets (make-gets table schema records)]
+       (map (partial decode-latest schema)
+	    (process-batch table gets))))
+  ([table records common-constraints]
+     (let [schema (table-schema table)
+	   gets (make-gets table schema records common-constraints)]
+       (map (partial decode-latest schema)
+	    (process-batch table gets)))))
+
 	
 ;; ==================================
 ;; Scanning
