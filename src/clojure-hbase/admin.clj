@@ -1,13 +1,13 @@
-(ns com.davidsantiago.clojure-hbase.admin
+(ns clojure-hbase.admin
   (:refer-clojure :rename {get map-get} :exclude [flush])
   (:use clojure.contrib.def
-	com.davidsantiago.clojure-hbase
-	com.davidsantiago.clojure-hbase.internal)
+        clojure-hbase.core
+        clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants
-	    HTableDescriptor HColumnDescriptor]
-	   [org.apache.hadoop.hbase.client HBaseAdmin]
-	   [org.apache.hadoop.hbase.util Bytes]
-	   [org.apache.hadoop.hbase.io.hfile Compression]))
+            HTableDescriptor HColumnDescriptor]
+           [org.apache.hadoop.hbase.client HBaseAdmin]
+           [org.apache.hadoop.hbase.util Bytes]
+           [org.apache.hadoop.hbase.io.hfile Compression]))
 
 (defvar- *admin* (HBaseAdmin. (HBaseConfiguration.)))
 
@@ -30,17 +30,17 @@
 (defn column-descriptor
   [family-name & args]
   (let [specs (partition-query args column-desc-argnums)
-	cd (HColumnDescriptor. (to-bytes family-name))]
+        cd (HColumnDescriptor. (to-bytes family-name))]
     (doseq [spec specs]
       (condp = (first spec)
-	:block-cache-enabled      (.setBlockCacheEnabled cd (second spec))
-	:block-size               (.setBlockSize cd (second spec))
-	:bloom-filter             (.setBloomFilter cd (second spec))
-	:compression-type         (.setCompressionType cd (second spec))
-	:in-memory                (.setInMemory cd (second spec))
-	:map-file-index-interval  (.setMapFileIndexInterval cd (second spec))
-	:max-versions             (.setMaxVersions cd (second spec))
-	:time-to-live             (.setTimeToLive cd (second spec))))
+          :block-cache-enabled      (.setBlockCacheEnabled cd (second spec))
+          :block-size               (.setBlockSize cd (second spec))
+          :bloom-filter             (.setBloomFilter cd (second spec))
+          :compression-type         (.setCompressionType cd (second spec))
+          :in-memory                (.setInMemory cd (second spec))
+          :map-file-index-interval  (.setMapFileIndexInterval cd (second spec))
+          :max-versions             (.setMaxVersions cd (second spec))
+          :time-to-live             (.setTimeToLive cd (second spec))))
     cd))
 
 ;;
@@ -57,13 +57,13 @@
 (defn table-descriptor
   [table-name & args]
   (let [specs (partition-query args table-desc-argnums)
-	td (HTableDescriptor. (to-bytes table-name))]
+        td (HTableDescriptor. (to-bytes table-name))]
     (doseq [spec specs]
       (condp = (first spec)
-	:max-file-size         (.setMaxFileSize td (second spec))
-	:mem-store-flush-size  (.setMemStoreFlushSize td (second spec))
-	:read-only             (.setReadOnly td (second spec))
-	:family                (.addFamily td (second spec))))
+          :max-file-size         (.setMaxFileSize td (second spec))
+          :mem-store-flush-size  (.setMemStoreFlushSize td (second spec))
+          :read-only             (.setReadOnly td (second spec))
+          :family                (.addFamily td (second spec))))
     td))
 
 
@@ -154,7 +154,7 @@
 (defn modify-column-family
   [table-name column-name column-descriptor]
   (.modifyColumn *admin* (to-bytes table-name) (to-bytes column-name)
-		 column-descriptor))
+                 column-descriptor))
 
 (defn modify-table
   [table-name table-descriptor]

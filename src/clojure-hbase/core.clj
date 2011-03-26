@@ -1,15 +1,13 @@
-(ns com.davidsantiago.clojure-hbase
+(ns clojure-hbase.core
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
-	clojure.contrib.seq-utils
-	clojure.contrib.java-utils
-	com.davidsantiago.clojure-hbase.internal)
+        clojure.contrib.seq-utils
+        clojure.contrib.java-utils
+        clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
-	   [org.apache.hadoop.hbase.client HTable
-	    HTablePool Get Put Delete Scan Result RowLock]
-	   [org.apache.hadoop.hbase.util Bytes]))
-
-;(set! *warn-on-reflection* true)
+           [org.apache.hadoop.hbase.client HTable
+            HTablePool Get Put Delete Scan Result RowLock]
+           [org.apache.hadoop.hbase.util Bytes]))
 
 (defvar- put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
 (defvar- get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))
@@ -66,21 +64,21 @@
    default function, which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	default-fn   (map-get options :map-default identity)
-	family-fn    (map-get options :map-family default-fn)
-	qualifier-fn (map-get options :map-qualifier default-fn)
-	timestamp-fn (map-get options :map-timestamp default-fn)
-	value-fn     (map-get options :map-value default-fn)]
+        default-fn   (map-get options :map-default identity)
+        family-fn    (map-get options :map-family default-fn)
+        qualifier-fn (map-get options :map-qualifier default-fn)
+        timestamp-fn (map-get options :map-timestamp default-fn)
+        value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
-	   kv-map {}]
+           kv-map {}]
       (if-let [kv (first remaining-kvs)]
-	(let [family    (family-fn (.getFamily kv))
-	      qualifier (qualifier-fn (.getQualifier kv))
-	      timestamp (timestamp-fn (.getTimestamp kv))
-	      value     (value-fn (.getValue kv))]
-	  (recur (next remaining-kvs)
-		 (assoc-in kv-map [family qualifier timestamp] value)))
-	kv-map))))
+        (let [family    (family-fn (.getFamily kv))
+              qualifier (qualifier-fn (.getQualifier kv))
+              timestamp (timestamp-fn (.getTimestamp kv))
+              value     (value-fn (.getValue kv))]
+          (recur (next remaining-kvs)
+                 (assoc-in kv-map [family qualifier timestamp] value)))
+        kv-map))))
 
 (defn latest-as-map
   "Extracts the contents of the Result object and sticks them into a 2-level
@@ -91,27 +89,27 @@
    which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	default-fn   (map-get options :map-default identity)
-	family-fn    (map-get options :map-family default-fn)
-	qualifier-fn (map-get options :map-qualifier default-fn)
-	value-fn     (map-get options :map-value default-fn)]
+        default-fn   (map-get options :map-default identity)
+        family-fn    (map-get options :map-family default-fn)
+        qualifier-fn (map-get options :map-qualifier default-fn)
+        value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
-	   keys #{}]
+           keys #{}]
       (if-let [kv (first remaining-kvs)]
-	(let [family    (.getFamily kv)
-	      qualifier (.getQualifier kv)]
-	  (recur (next remaining-kvs)
-		 (conj keys [family qualifier])))
-	;; At this point, we have a duplicate-less list of [f q] keys in keys.
-	;; Go back through, pulling the latest values for these keys.
-	(loop [remaining-keys keys
-	       kv-map {}]
-	  (if-let [[family qualifier] (first remaining-keys)]
-	    (recur (next remaining-keys)
-		   (assoc-in kv-map [(family-fn family)
-				     (qualifier-fn qualifier)]
-			     (value-fn (.getValue result family qualifier))))
-	    kv-map))))))
+        (let [family    (.getFamily kv)
+              qualifier (.getQualifier kv)]
+          (recur (next remaining-kvs)
+                 (conj keys [family qualifier])))
+        ;; At this point, we have a duplicate-less list of [f q] keys in keys.
+        ;; Go back through, pulling the latest values for these keys.
+        (loop [remaining-keys keys
+               kv-map {}]
+          (if-let [[family qualifier] (first remaining-keys)]
+            (recur (next remaining-keys)
+                   (assoc-in kv-map [(family-fn family)
+                                     (qualifier-fn qualifier)]
+                             (value-fn (.getValue result family qualifier))))
+            kv-map))))))
 
 (defn as-vector
   "Extracts the contents of the Result object and sticks them into a
@@ -123,21 +121,21 @@
    default function, which will be overriden by the more specific directives."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
-	default-fn   (map-get options :map-default identity)
-	family-fn    (map-get options :map-family default-fn)
-	qualifier-fn (map-get options :map-qualifier default-fn)
-	timestamp-fn (map-get options :map-timestamp default-fn)
-	value-fn     (map-get options :map-value default-fn)]
+        default-fn   (map-get options :map-default identity)
+        family-fn    (map-get options :map-family default-fn)
+        qualifier-fn (map-get options :map-qualifier default-fn)
+        timestamp-fn (map-get options :map-timestamp default-fn)
+        value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
-	   kv-vec (transient [])]
+           kv-vec (transient [])]
       (if-let [kv (first remaining-kvs)]
-	(let [family    (family-fn (.getFamily kv))
-	      qualifier (qualifier-fn (.getQualifier kv))
-	      timestamp (timestamp-fn (.getTimestamp kv))
-	      value     (value-fn (.getValue kv))]
-	  (recur (next remaining-kvs)
-		 (conj! kv-vec [family qualifier timestamp value])))
-	(persistent! kv-vec)))))
+        (let [family    (family-fn (.getFamily kv))
+              qualifier (qualifier-fn (.getQualifier kv))
+              timestamp (timestamp-fn (.getTimestamp kv))
+              value     (value-fn (.getValue kv))]
+          (recur (next remaining-kvs)
+                 (conj! kv-vec [family qualifier timestamp value])))
+        (persistent! kv-vec)))))
 
 (defn scanner
   "Creates a Scanner on the given table using the given Scan."
@@ -169,12 +167,12 @@
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
-			     (try
-			      (with-table ~(subvec bindings 2) ~@body)
-			      (finally
-			       (release-table ~(bindings 0)))))
+                             (try
+                               (with-table ~(subvec bindings 2) ~@body)
+                               (finally
+                                (release-table ~(bindings 0)))))
    :else (throw (IllegalArgumentException.
-		 "Bindings must be symbols."))))
+                 "Bindings must be symbols."))))
 
 (defmacro with-scanner
   "Executes body, after creating the scanners given in the bindings. Any scanner
@@ -186,10 +184,10 @@
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
-			     (try
-			      (with-scanner ~(subvec bindings 2) ~@body)
-			      (finally
-			       (.close ~(bindings 0)))))
+                             (try
+                               (with-scanner ~(subvec bindings 2) ~@body)
+                               (finally
+                                (.close ~(bindings 0)))))
    :else (throw (IllegalArgumentException. "Bindings must be symbols."))))
 
 (defn row-lock
@@ -211,24 +209,24 @@
   [#^HTable table & ops]
   (io!
    (map (fn [op]
-	  (condp instance? op
-	    get-class   (.get table #^Get op)
-	    scan-class  (scanner table op)
-	    (throw (IllegalArgumentException.
-		    "Arguments must be Get or Scan objects."))))
-	ops)))
+          (condp instance? op
+            get-class   (.get table #^Get op)
+            scan-class  (scanner table op)
+            (throw (IllegalArgumentException.
+                    "Arguments must be Get or Scan objects."))))
+        ops)))
 
 (defn modify
   "Performs the given modifying actions (Put/Delete) on the given HTable."
   [#^HTable table & ops]
   (io!
    (map (fn [op]
-	  (condp instance? op
-	    put-class     (.put table #^Put op)
-	    delete-class  (.delete table #^Delete op)
-	    (throw (IllegalArgumentException.
-		    "Arguments must be Put or Delete objects."))))
-	ops)))
+          (condp instance? op
+            put-class     (.put table #^Put op)
+            delete-class  (.delete table #^Delete op)
+            (throw (IllegalArgumentException.
+                    "Arguments must be Put or Delete objects."))))
+        ops)))
 
 ;;
 ;;  GET
@@ -239,14 +237,14 @@
    an existing Get, or passing a pre-existing RowLock."
   [row options]
   (let [row (to-bytes row)
-	directives #{:row-lock :use-existing}
-	cons-opts (apply hash-map (flatten (filter
-					    #(contains? directives
-							(first %)) options)))]
+        directives #{:row-lock :use-existing}
+        cons-opts (apply hash-map (flatten (filter
+                                            #(contains? directives
+                                                        (first %)) options)))]
     (condp contains? cons-opts
-	:use-existing (io! (:use-existing cons-opts))
-	:row-lock     (new Get row (:row-lock cons-opts))
-	(new Get row))))
+      :use-existing (io! (:use-existing cons-opts))
+      :row-lock     (new Get row (:row-lock cons-opts))
+      (new Get row))))
 
 (defvar- get-argnums
   {:column       1    ;; :column [:family-name :qualifier]
@@ -272,7 +270,7 @@
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
-	(.addColumn get-op (to-bytes family) (to-bytes q)))))
+        (.addColumn get-op (to-bytes family) (to-bytes q)))))
   get-op)
 
 (defn get*
@@ -282,21 +280,21 @@
    :row-lock."
   [row & args]
   (let [specs (partition-query args get-argnums)
-	#^Get get-op (make-get row specs)]
+        #^Get get-op (make-get row specs)]
     (doseq [spec specs]
       (condp = (first spec)
-	:column       (apply #(.addColumn get-op
-					  (to-bytes %1) (to-bytes %2))
-			     (second spec))
-	:columns      (handle-get-columns get-op (second spec))
-	:family       (.addFamily get-op (to-bytes (second spec)))
-	:families     (for [f (second spec)]
-			(.addFamily get-op (to-bytes f)))
-	:filter       (.setFilter get-op (second spec))
-	:all-versions (.setMaxVersions get-op)
-	:max-versions (.setMaxVersions get-op (second spec))
-	:time-range   (apply #(.setTimeRange get-op %1 %2) (second spec))
-	:time-stamp   (.setTimeStamp get-op (second spec))))
+          :column       (apply #(.addColumn get-op
+                                            (to-bytes %1) (to-bytes %2))
+                               (second spec))
+          :columns      (handle-get-columns get-op (second spec))
+          :family       (.addFamily get-op (to-bytes (second spec)))
+          :families     (for [f (second spec)]
+                          (.addFamily get-op (to-bytes f)))
+          :filter       (.setFilter get-op (second spec))
+          :all-versions (.setMaxVersions get-op)
+          :max-versions (.setMaxVersions get-op (second spec))
+          :time-range   (apply #(.setTimeRange get-op %1 %2) (second spec))
+          :time-stamp   (.setTimeStamp get-op (second spec))))
     get-op))
 
 (defn get
@@ -327,14 +325,14 @@
    an existing Put, or passing a pre-existing RowLock."
   [row options]
   (let [row (to-bytes row)
-	directives #{:row-lock :use-existing}
-	cons-opts (apply hash-map (flatten (filter
-					    #(contains? directives
-							(first %)) options)))]
+        directives #{:row-lock :use-existing}
+        cons-opts (apply hash-map (flatten (filter
+                                            #(contains? directives
+                                                        (first %)) options)))]
     (condp contains? cons-opts
-	:use-existing (io! (:use-existing cons-opts))
-	:row-lock     (new Put row (:row-lock cons-opts))
-	(new Put row))))
+      :use-existing (io! (:use-existing cons-opts))
+      :row-lock     (new Put row (:row-lock cons-opts))
+      (new Put row))))
 
 (defn- put-add
   [#^Put put-op family qualifier value]
@@ -345,7 +343,7 @@
   (doseq [value (partition 2 values)]
     (let [[family qv-pairs] value]
       (doseq [[q v] (partition 2 qv-pairs)]
-	(put-add put-op family q v))))
+        (put-add put-op family q v))))
   put-op)
 
 (defn put*
@@ -355,14 +353,14 @@
    :row-lock."
   [row & args]
   (let [specs  (partition-query args put-argnums)
-	#^Put put-op (make-put row specs)]
+        #^Put put-op (make-put row specs)]
     (doseq [spec specs]
       (condp = (first spec)
-	:value          (apply put-add put-op (second spec))
-	:values         (handle-put-values put-op (second spec))
-	:write-to-WAL   (.setWriteToWAL put-op (second spec))
-	:time-stamp     (.setTimeStamp put-op (second spec))
-	:current-time   (.setTimeStamp put-op HConstants/LATEST_TIMESTAMP)))
+          :value          (apply put-add put-op (second spec))
+          :values         (handle-put-values put-op (second spec))
+          :write-to-WAL   (.setWriteToWAL put-op (second spec))
+          :time-stamp     (.setTimeStamp put-op (second spec))
+          :current-time   (.setTimeStamp put-op HConstants/LATEST_TIMESTAMP)))
     put-op))
 
 (defn put
@@ -378,7 +376,7 @@
    give, and if so, executes the Put."
   ([#^HTable table row family qualifier value #^Put put]
      (.checkAndPut table (to-bytes row) (to-bytes family) (to-bytes qualifier)
-		   (to-bytes value) put))
+                   (to-bytes value) put))
   ([#^HTable table [row family qualifier value] #^Put put]
      (check-and-put table row family qualifier value put)))
 
@@ -388,7 +386,7 @@
    be determined from a Put object, so they must be specified."
   [#^HTable table family qualifier put]
   (check-and-put table (.getRow put) family qualifier
-		 (byte-array 0) put))
+                 (byte-array 0) put))
 
 ;;
 ;; DELETE
@@ -411,15 +409,15 @@
    an existing Delete, or passing a pre-existing RowLock."
   [row options]
   (let [row (to-bytes row)
-	directives #{:row-lock :use-existing}
-	cons-opts (apply hash-map (flatten (filter
-					    #(contains? directives (first %))
-					    options)))]
+        directives #{:row-lock :use-existing}
+        cons-opts (apply hash-map (flatten (filter
+                                            #(contains? directives (first %))
+                                            options)))]
     (condp contains? cons-opts
-	:use-existing (io! (:use-existing cons-opts))
-	:row-lock     (new Delete row HConstants/LATEST_TIMESTAMP
-			   (:row-lock cons-opts))
-	(new Delete row))))
+      :use-existing (io! (:use-existing cons-opts))
+      :row-lock     (new Delete row HConstants/LATEST_TIMESTAMP
+                         (:row-lock cons-opts))
+      (new Delete row))))
 
 (defn- delete-column
   [#^Delete delete-op family qualifier]
@@ -444,29 +442,29 @@
 (defn- handle-delete-ts
   [#^Delete delete-op ts-specs]
   (doseq [[ts-op timestamp specs] (partition 3 ts-specs)
-	  spec specs]
+          spec specs]
     (condp = ts-op
-      :with-timestamp
+        :with-timestamp
       (condp = (first spec)
-	:column
-	(apply #(delete-column-with-timestamp delete-op %1 %2 timestamp)
-	       (rest spec))
-	:columns (let [[family quals] (rest spec)]
-		   (doseq [q quals]
-		     (delete-column-with-timestamp
-		       delete-op family q timestamp))))
+          :column
+        (apply #(delete-column-with-timestamp delete-op %1 %2 timestamp)
+               (rest spec))
+        :columns (let [[family quals] (rest spec)]
+                   (doseq [q quals]
+                     (delete-column-with-timestamp
+                       delete-op family q timestamp))))
       :with-timestamp-before
       (condp = (first spec)
-	:column
-	(apply #(delete-column-before-timestamp delete-op %1 %2 timestamp)
-	       (rest spec))
-	:columns (let [[family quals] (rest spec)]
-		   (doseq [q quals]
-		     (delete-column-before-timestamp
-		      delete-op family q timestamp)))
-	:family (delete-family-timestamp delete-op (second spec) timestamp)
-	:families (doseq [f (rest spec)]
-		    (delete-family-timestamp delete-op f timestamp))))))
+          :column
+        (apply #(delete-column-before-timestamp delete-op %1 %2 timestamp)
+               (rest spec))
+        :columns (let [[family quals] (rest spec)]
+                   (doseq [q quals]
+                     (delete-column-before-timestamp
+                      delete-op family q timestamp)))
+        :family (delete-family-timestamp delete-op (second spec) timestamp)
+        :families (doseq [f (rest spec)]
+                    (delete-family-timestamp delete-op f timestamp))))))
 
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
@@ -475,19 +473,19 @@
    :row-lock."
   [row & args]
   (let [specs     (partition-query args delete-argnums)
-	delete-op (make-delete row specs)]
+        delete-op (make-delete row specs)]
     (doseq [spec specs]
       (condp = (first spec)
-	:with-timestamp        (handle-delete-ts delete-op spec)
-	:with-timestamp-before (handle-delete-ts delete-op spec)
-	:column                (apply #(delete-column delete-op %1 %2)
-				      (second spec))
-	:columns               (let [[family quals] (rest spec)]
-				 (doseq [q quals]
-				   (delete-column delete-op family q)))
-	:family                (delete-family delete-op (second spec))
-	:families              (doseq [f (rest spec)]
-				 (delete-family delete-op f))))
+          :with-timestamp        (handle-delete-ts delete-op spec)
+          :with-timestamp-before (handle-delete-ts delete-op spec)
+          :column                (apply #(delete-column delete-op %1 %2)
+                                        (second spec))
+          :columns               (let [[family quals] (rest spec)]
+                                   (doseq [q quals]
+                                     (delete-column delete-op family q)))
+          :family                (delete-family delete-op (second spec))
+          :families              (doseq [f (rest spec)]
+                                   (delete-family delete-op f))))
     delete-op))
 
 (defn delete
@@ -521,9 +519,9 @@
 (defn- make-scan
   [options]
   (let [directives #{:use-existing}
-	cons-opts (apply hash-map (flatten (filter
-					    #(contains? directives (first %))
-					    options)))]
+        cons-opts (apply hash-map (flatten (filter
+                                            #(contains? directives (first %))
+                                            options)))]
     (condp contains? cons-opts
       :use-existing (io! (:use-existing cons-opts))
       (Scan.))))
@@ -534,23 +532,23 @@
    :use-existing."
   [& args]
   (let [specs   (partition-query args scan-argnums)
-	scan-op #^Scan (make-scan specs)]
+        scan-op #^Scan (make-scan specs)]
     (doseq [spec specs]
       (condp = (first spec)
-	:column       (apply #(.addColumn scan-op
-					  (to-bytes %1) (to-bytes %2))
-			     (second spec))
-	:columns      (handle-get-columns scan-op (second spec))
-	:family       (.addFamily scan-op (to-bytes (second spec)))
-	:families     (for [f (second spec)]
-			(.addFamily scan-op (to-bytes f)))
-	:filter       (.setFilter scan-op (second spec))
-	:all-versions (.setMaxVersions scan-op)
-	:max-versions (.setMaxVersions scan-op (second spec))
-	:time-range   (apply #(.setTimeRange scan-op %1 %2) (second spec))
-	:time-stamp   (.setTimeStamp scan-op (second spec))
-	:start-row    (.setStartRow scan-op (to-bytes (second spec)))
-	:stop-row     (.setStopRow scan-op (to-bytes (second spec)))))
+          :column       (apply #(.addColumn scan-op
+                                            (to-bytes %1) (to-bytes %2))
+                               (second spec))
+          :columns      (handle-get-columns scan-op (second spec))
+          :family       (.addFamily scan-op (to-bytes (second spec)))
+          :families     (for [f (second spec)]
+                          (.addFamily scan-op (to-bytes f)))
+          :filter       (.setFilter scan-op (second spec))
+          :all-versions (.setMaxVersions scan-op)
+          :max-versions (.setMaxVersions scan-op (second spec))
+          :time-range   (apply #(.setTimeRange scan-op %1 %2) (second spec))
+          :time-stamp   (.setTimeStamp scan-op (second spec))
+          :start-row    (.setStartRow scan-op (to-bytes (second spec)))
+          :stop-row     (.setStopRow scan-op (to-bytes (second spec)))))
     scan-op))
 
 (defn scan

@@ -1,4 +1,4 @@
-(ns com.davidsantiago.clojure-hbase.internal
+(ns clojure-hbase.internal
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def))
 
@@ -12,10 +12,10 @@
    command keyword followed by args."
   [query cmd-argnum-map]
   (loop [result []
-	 remaining-commands query]
+         remaining-commands query]
     (let [kw (first remaining-commands)]
       (if (nil? kw)
-	result
-	(let [[a-cmd rest-cmds] (split-at (inc (map-get cmd-argnum-map kw 1))
-					  remaining-commands)]
-	  (recur (conj result a-cmd) rest-cmds))))))
+        result
+        (let [[a-cmd rest-cmds] (split-at (inc (map-get cmd-argnum-map kw 1))
+                                          remaining-commands)]
+          (recur (conj result a-cmd) rest-cmds))))))
