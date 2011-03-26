@@ -1,10 +1,10 @@
-(ns clojure-hbase-test
+(ns clojure-hbase.core-test
   (:refer-clojure :rename {get map-get})
   (:use clojure.test
-	[com.davidsantiago.clojure-hbase]
-	[com.davidsantiago.clojure-hbase.admin :exclude [flush]])
+        [clojure-hbase.core]
+        [clojure-hbase.admin :exclude [flush]])
   (:import [org.apache.hadoop.hbase.util Bytes]
-	   [java.util UUID]))
+           [java.util UUID]))
 
 ;; This file creates a table to do all its work in, and requires an already-
 ;; configured running instance of HBase. Obviously, make sure this is not a
@@ -19,18 +19,18 @@
 (defmacro as-test [& body]
   `(do
      (try
-      (setup-tbl)
-      ~@body
-      (finally
-       (remove-tbl)))))
+       (setup-tbl)
+       ~@body
+       (finally
+        (remove-tbl)))))
 
 (deftest create-delete-table
   (as-test
    (is (.contains (map #(Bytes/toString (.getName %)) (list-tables))
-		  test-tbl-name)
+                  test-tbl-name)
        "The table was created at the beginning of the as-test."))
   (is (not (.contains (map #(Bytes/toString (.getName %)) (list-tables))
-		      test-tbl-name))
+                      test-tbl-name))
       "Now that we are out of the as-test, the table doesn't exist."))
 
 (deftest add-delete-CF
@@ -39,19 +39,19 @@
      (disable-table test-tbl-name)
      (add-column-family test-tbl-name (column-descriptor cf-name))
      (is (= (.getNameAsString (.getFamily
-			       (get-table-descriptor test-tbl-name)
-			       (to-bytes cf-name)))
-	    cf-name)
-	 "Created a new column family and retrieved its column descriptor.")
+                               (get-table-descriptor test-tbl-name)
+                               (to-bytes cf-name)))
+            cf-name)
+         "Created a new column family and retrieved its column descriptor.")
      (delete-column-family test-tbl-name cf-name)
      (is (= nil (.getFamily (get-table-descriptor test-tbl-name)
-			    (to-bytes cf-name)))
-	 "Deleted the column family successfully."))))
+                            (to-bytes cf-name)))
+         "Deleted the column family successfully."))))
 
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
-	row     "testrow"
-	value   "testval"]
+        row     "testrow"
+        value   "testval"]
     (as-test
      (disable-table test-tbl-name)
      (add-column-family test-tbl-name (column-descriptor cf-name))
@@ -59,19 +59,19 @@
      (with-table [test-tbl (table test-tbl-name)]
        (put test-tbl row :value [cf-name :testqual value])
        (is (= value (Bytes/toString (last (first
-					   (as-vector
-					    (get test-tbl row :column
-						 [cf-name :testqual]))))))
-	   "Successfully executed Put and Get.")
+                                           (as-vector
+                                            (get test-tbl row :column
+                                                 [cf-name :testqual]))))))
+           "Successfully executed Put and Get.")
        (delete test-tbl row :column [cf-name :testqual])
        (is (= '() (as-vector (get test-tbl row :column
-				  [cf-name :testqual])))
-	   "Successfully executed Delete of the Put.")))))
+                                  [cf-name :testqual])))
+           "Successfully executed Delete of the Put.")))))
 
 (def scan-row-values (sort-by #(first %)
-			      (for [k (range 10000)]
-				[(str (UUID/randomUUID))
-				 (str (UUID/randomUUID))])))
+                              (for [k (range 10000)]
+                                [(str (UUID/randomUUID))
+                                 (str (UUID/randomUUID))])))
 
 (deftest scan-check
   (let [cf-name "test-cf-name"]
@@ -81,19 +81,19 @@
      (enable-table test-tbl-name)
      (with-table [test-tbl (table test-tbl-name)]
        (doseq [[key value] scan-row-values]
-	 (put test-tbl key :value [cf-name :value value]))
+         (put test-tbl key :value [cf-name :value value]))
        (is (= true
-	      (reduce #(and %1 %2)
-		      (with-scanner [scan-results (scan test-tbl)]
-			  (map #(= (first %1)
-				   (Bytes/toString (.getRow %2)))
-			       scan-row-values (seq scan-results))))))))))
+              (reduce #(and %1 %2)
+                      (with-scanner [scan-results (scan test-tbl)]
+                        (map #(= (first %1)
+                                 (Bytes/toString (.getRow %2)))
+                             scan-row-values (seq scan-results))))))))))
 
 (deftest as-map-test
   (let [cf-name "test-cf-name"
-	qual    "testqual"
-	row     "testrow"
-	value   "testval"]
+        qual    "testqual"
+        row     "testrow"
+        value   "testval"]
     (as-test
      (disable-table test-tbl-name)
      (add-column-family test-tbl-name (column-descriptor cf-name))
@@ -101,15 +101,15 @@
      (with-table [test-tbl (table test-tbl-name)]
        (put test-tbl row :time-stamp 1 :value [cf-name qual value])
        (is (= {cf-name {qual {"1" value}}}
-	      (as-map (get test-tbl row)
-			       :map-family    #(Bytes/toString %)
-			       :map-qualifier #(Bytes/toString %)
-			       :map-timestamp str
-			       :map-value     #(Bytes/toString %)))
-	   "as-map works.")
+              (as-map (get test-tbl row)
+                      :map-family    #(Bytes/toString %)
+                      :map-qualifier #(Bytes/toString %)
+                      :map-timestamp str
+                      :map-value     #(Bytes/toString %)))
+           "as-map works.")
        (is (= {cf-name {qual value}}
-	      (latest-as-map (get test-tbl row)
-			     :map-family    #(Bytes/toString %)
-			     :map-qualifier #(Bytes/toString %)
-			     :map-value     #(Bytes/toString %)))
-	   "latest-as-map works.")))))
+              (latest-as-map (get test-tbl row)
+                             :map-family    #(Bytes/toString %)
+                             :map-qualifier #(Bytes/toString %)
+                             :map-value     #(Bytes/toString %)))
+           "latest-as-map works.")))))
