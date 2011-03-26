@@ -1,6 +1,7 @@
 (ns clojure-hbase.util-test
   (:refer-clojure :rename {get map-get})
   (:use clojure.test
+        clojure-hbase.core
         clojure-hbase.util)
   (:import org.apache.hadoop.hbase.util.Bytes))
 

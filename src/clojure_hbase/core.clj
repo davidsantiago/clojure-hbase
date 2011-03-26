@@ -1,7 +1,6 @@
 (ns clojure-hbase.core
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
-        clojure.contrib.seq-utils
         clojure.contrib.java-utils
         clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
@@ -162,8 +161,8 @@
    created in this way (use the function table) will automatically be returned
    to the HTablePool when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings)
+         (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
@@ -179,8 +178,8 @@
    created in this way (use the function scanner or scan!) will automatically
    be closed when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings)
+         (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
@@ -313,8 +312,6 @@
   {:value        1    ;; :value [:family :column <value>]
    :values       1    ;; :values [:family [:column1 value1 ...] ...]
    :write-to-WAL 1    ;; :write-to-WAL true/false
-   :time-stamp   1    ;; :time-stamp time
-   :current-time 0    ;; :current-time
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1}   ;; :use-existing <a Put you've made>
   "This maps each put command to its number of arguments, for helping us
@@ -358,9 +355,7 @@
       (condp = (first spec)
           :value          (apply put-add put-op (second spec))
           :values         (handle-put-values put-op (second spec))
-          :write-to-WAL   (.setWriteToWAL put-op (second spec))
-          :time-stamp     (.setTimeStamp put-op (second spec))
-          :current-time   (.setTimeStamp put-op HConstants/LATEST_TIMESTAMP)))
+          :write-to-WAL   (.setWriteToWAL put-op (second spec))))
     put-op))
 
 (defn put
