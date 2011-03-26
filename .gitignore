@@ -1,5 +1,7 @@
 pom-generated.xml
 Manifest.txt
-clojure-hbase.jar
+*.jar
 lib
 classes
+.cake
+pom.xml
