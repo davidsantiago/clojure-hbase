@@ -1,9 +1,8 @@
 (ns clojure-hbase.core
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
-        clojure.contrib.java-utils
         clojure-hbase.internal)
-  (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
+  (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants KeyValue]
            [org.apache.hadoop.hbase.client HTable
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
@@ -19,7 +18,7 @@
    nor the use of multiple databases simultaneously (configuration is driven by
    the XML config files). So we just hide this detail from the user.")
 
-(defn- htable-pool
+(defn- ^HTablePool htable-pool
   []
   (if-let [pool @*db*]
     pool
@@ -35,19 +34,22 @@
   arg)
 (defmethod to-bytes-impl clojure.lang.Keyword
   [arg]
-  (Bytes/toBytes (as-str arg)))
+  (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.Symbol
   [arg]
-  (Bytes/toBytes (as-str arg)))
+  (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.IPersistentList
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [list-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String list-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentVector
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [vec-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String vec-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentMap
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [map-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String map-as-str)))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
@@ -76,7 +78,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            kv-map {}]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
@@ -100,7 +102,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            keys #{}]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (.getFamily kv)
               qualifier (.getQualifier kv)]
           (recur (next remaining-kvs)
@@ -133,7 +135,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            kv-vec (transient [])]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
@@ -271,7 +273,7 @@
    :columns specifier (ie, :columns [:family [:col1 :col2 :col3]]). Returns
    the get operation, but remember, it is mutable. Note that this function
    is also used by the bindings for Scan, since they have the same functions."
-  [get-op columns]
+  [^Get get-op columns]
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
@@ -334,7 +336,7 @@
                                                         (first %)) options)))]
     (condp contains? cons-opts
       :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Put row (:row-lock cons-opts))
+      :row-lock     (new Put row ^RowLock (:row-lock cons-opts))
       (new Put row))))
 
 (defn- put-add
@@ -385,7 +387,7 @@
   "If the family and qualifier are non-existent, the Put will be committed.
    The row is taken from the Put object, but the family and qualifier cannot
    be determined from a Put object, so they must be specified."
-  [#^HTable table family qualifier put]
+  [#^HTable table family qualifier ^Put put]
   (check-and-put table (.getRow put) family qualifier
                  (byte-array 0) put))
 
