@@ -9,7 +9,7 @@
            [org.apache.hadoop.hbase.util Bytes]
            [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(defvar- *admin* (HBaseAdmin. (HBaseConfiguration.)))
+(defvar- ^HBaseAdmin *admin* (HBaseAdmin. (HBaseConfiguration/create)))
 
 ;;
 ;; HColumnDescriptor
@@ -18,10 +18,9 @@
 (defvar- column-desc-argnums
   {:block-cache-enabled      1  ;; :block-cache-enabled <boolean>
    :block-size               1  ;; :block-size <int>
-   :bloom-filter             1  ;; :bloom-filter <boolean>
+   :bloom-filter-type        1  ;; :bloom-filter <StoreFile.BloomType>
    :compression-type         1  ;; :compression-type <Compression.Algorithm>
    :in-memory                1  ;; :in-memory <boolean>
-   :map-file-index-interval  1  ;; :map-file-index-interval <int>
    :max-versions             1  ;; :max-versions <int>
    :time-to-live             1} ;; :time-to-live <int>
   "This maps each get command to its number of arguments, for helping us
@@ -30,15 +29,14 @@
 (defn column-descriptor
   [family-name & args]
   (let [specs (partition-query args column-desc-argnums)
-        cd (HColumnDescriptor. (to-bytes family-name))]
+        ^HColumnDescriptor cd (HColumnDescriptor. (to-bytes family-name))]
     (doseq [spec specs]
       (condp = (first spec)
           :block-cache-enabled      (.setBlockCacheEnabled cd (second spec))
-          :block-size               (.setBlockSize cd (second spec))
-          :bloom-filter             (.setBloomFilter cd (second spec))
+          :block-size               (.setBlocksize cd (second spec))
+          :bloom-filter-type        (.setBloomFilterType cd (second spec))
           :compression-type         (.setCompressionType cd (second spec))
           :in-memory                (.setInMemory cd (second spec))
-          :map-file-index-interval  (.setMapFileIndexInterval cd (second spec))
           :max-versions             (.setMaxVersions cd (second spec))
           :time-to-live             (.setTimeToLive cd (second spec))))
     cd))
@@ -72,7 +70,7 @@
 ;;
 
 (defn add-column-family
-  [table-name column-descriptor]
+  [table-name ^HColumnDescriptor column-descriptor]
   (.addColumn *admin* (to-bytes table-name) column-descriptor))
 
 (defn hbase-available?
@@ -88,8 +86,8 @@
   (.createTable *admin* table-descriptor))
 
 (defn create-table-async
-  [table-descriptor]
-  (.createTableAsync *admin* table-descriptor))
+  [^HTableDescriptor table-descriptor split-keys]
+  (.createTableAsync *admin* table-descriptor split-keys))
 
 (defn delete-column-family
   [table-name column-name]
@@ -152,7 +150,7 @@
   (.majorCompact *admin* (to-bytes table-or-region-name)))
 
 (defn modify-column-family
-  [table-name column-name column-descriptor]
+  [table-name column-name ^HColumnDescriptor column-descriptor]
   (.modifyColumn *admin* (to-bytes table-name) (to-bytes column-name)
                  column-descriptor))
 

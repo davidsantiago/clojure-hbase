@@ -1,10 +1,8 @@
 (ns clojure-hbase.core
   (:refer-clojure :rename {get map-get})
   (:use clojure.contrib.def
-        clojure.contrib.seq-utils
-        clojure.contrib.java-utils
         clojure-hbase.internal)
-  (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants]
+  (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants KeyValue]
            [org.apache.hadoop.hbase.client HTable
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
@@ -14,11 +12,17 @@
 (defvar- delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
 (defvar- scan-class (Class/forName   "org.apache.hadoop.hbase.client.Scan"))
 
-(defvar- #^HTablePool *db* (HTablePool.)
+(defvar- #^HTablePool *db* (atom nil)
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
    nor the use of multiple databases simultaneously (configuration is driven by
    the XML config files). So we just hide this detail from the user.")
+
+(defn- ^HTablePool htable-pool
+  []
+  (if-let [pool @*db*]
+    pool
+    (swap! *db* (fn [_] (HTablePool.)))))
 
 (defmulti to-bytes-impl
   "Converts its argument into an array of bytes. By default, uses HBase's
@@ -30,19 +34,22 @@
   arg)
 (defmethod to-bytes-impl clojure.lang.Keyword
   [arg]
-  (Bytes/toBytes (as-str arg)))
+  (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.Symbol
   [arg]
-  (Bytes/toBytes (as-str arg)))
+  (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.IPersistentList
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [list-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String list-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentVector
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [vec-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String vec-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentMap
   [arg]
-  (Bytes/toBytes (binding [*print-dup* false] (pr-str arg))))
+  (let [map-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String map-as-str)))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
@@ -71,7 +78,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            kv-map {}]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
@@ -95,7 +102,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            keys #{}]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (.getFamily kv)
               qualifier (.getQualifier kv)]
           (recur (next remaining-kvs)
@@ -128,7 +135,7 @@
         value-fn     (map-get options :map-value default-fn)]
     (loop [remaining-kvs (seq (.raw result))
            kv-vec (transient [])]
-      (if-let [kv (first remaining-kvs)]
+      (if-let [^KeyValue kv (first remaining-kvs)]
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
@@ -147,13 +154,13 @@
   "Gets an HTable from the open HTablePool by name."
   [table-name]
   (io!
-   (.getTable *db* (to-bytes table-name))))
+   (.getTable (htable-pool) (to-bytes table-name))))
 
 (defn release-table
   "Puts an HTable back into the open HTablePool."
   [#^HTable table]
   (io!
-   (.putTable *db* table)))
+   (.putTable (htable-pool) table)))
 
 ;; with-table and with-scanner are basically the same function, but I couldn't
 ;; figure out a way to generate them both with the same macro.
@@ -162,8 +169,8 @@
    created in this way (use the function table) will automatically be returned
    to the HTablePool when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings)
+         (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
@@ -179,8 +186,8 @@
    created in this way (use the function scanner or scan!) will automatically
    be closed when the body finishes."
   [bindings & body]
-  {:pre (vector? bindings)
-   :pre (even? (count bindings))}
+  {:pre [(vector? bindings)
+         (even? (count bindings))]}
   (cond
    (= (count bindings) 0) `(do ~@body)
    (symbol? (bindings 0)) `(let ~(subvec bindings 0 2)
@@ -266,7 +273,7 @@
    :columns specifier (ie, :columns [:family [:col1 :col2 :col3]]). Returns
    the get operation, but remember, it is mutable. Note that this function
    is also used by the bindings for Scan, since they have the same functions."
-  [get-op columns]
+  [^Get get-op columns]
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
@@ -313,8 +320,6 @@
   {:value        1    ;; :value [:family :column <value>]
    :values       1    ;; :values [:family [:column1 value1 ...] ...]
    :write-to-WAL 1    ;; :write-to-WAL true/false
-   :time-stamp   1    ;; :time-stamp time
-   :current-time 0    ;; :current-time
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1}   ;; :use-existing <a Put you've made>
   "This maps each put command to its number of arguments, for helping us
@@ -331,7 +336,7 @@
                                                         (first %)) options)))]
     (condp contains? cons-opts
       :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Put row (:row-lock cons-opts))
+      :row-lock     (new Put row ^RowLock (:row-lock cons-opts))
       (new Put row))))
 
 (defn- put-add
@@ -358,9 +363,7 @@
       (condp = (first spec)
           :value          (apply put-add put-op (second spec))
           :values         (handle-put-values put-op (second spec))
-          :write-to-WAL   (.setWriteToWAL put-op (second spec))
-          :time-stamp     (.setTimeStamp put-op (second spec))
-          :current-time   (.setTimeStamp put-op HConstants/LATEST_TIMESTAMP)))
+          :write-to-WAL   (.setWriteToWAL put-op (second spec))))
     put-op))
 
 (defn put
@@ -384,7 +387,7 @@
   "If the family and qualifier are non-existent, the Put will be committed.
    The row is taken from the Put object, but the family and qualifier cannot
    be determined from a Put object, so they must be specified."
-  [#^HTable table family qualifier put]
+  [#^HTable table family qualifier ^Put put]
   (check-and-put table (.getRow put) family qualifier
                  (byte-array 0) put))
 
