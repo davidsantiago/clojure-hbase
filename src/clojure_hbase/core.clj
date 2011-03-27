@@ -13,11 +13,17 @@
 (defvar- delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
 (defvar- scan-class (Class/forName   "org.apache.hadoop.hbase.client.Scan"))
 
-(defvar- #^HTablePool *db* (HTablePool.)
+(defvar- #^HTablePool *db* (atom nil)
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
    nor the use of multiple databases simultaneously (configuration is driven by
    the XML config files). So we just hide this detail from the user.")
+
+(defn- htable-pool
+  []
+  (if-let [pool @*db*]
+    pool
+    (swap! *db* (fn [_] (HTablePool.)))))
 
 (defmulti to-bytes-impl
   "Converts its argument into an array of bytes. By default, uses HBase's
@@ -146,13 +152,13 @@
   "Gets an HTable from the open HTablePool by name."
   [table-name]
   (io!
-   (.getTable *db* (to-bytes table-name))))
+   (.getTable (htable-pool) (to-bytes table-name))))
 
 (defn release-table
   "Puts an HTable back into the open HTablePool."
   [#^HTable table]
   (io!
-   (.putTable *db* table)))
+   (.putTable (htable-pool) table)))
 
 ;; with-table and with-scanner are basically the same function, but I couldn't
 ;; figure out a way to generate them both with the same macro.
