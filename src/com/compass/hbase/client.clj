@@ -173,10 +173,10 @@
 (defn- get-action-executor []
   (if-let [exec @*multi-action-executor*]
     exec
-    (let [start-pool 1
-	  max-pool 4
-	  keepalive 120
-	  queue (ArrayBlockingQueue. 5)]
+    (let [start-pool 10
+	  max-pool 20
+	  keepalive 60
+	  queue (ArrayBlockingQueue. 40)]
       (swap! *multi-action-executor*
 	     (fn [a e] e)
 	     (ThreadPoolExecutor. start-pool max-pool keepalive
@@ -186,11 +186,16 @@
   "Low level execution of batch commands"
   [table actions]
   (let [results (make-array java.lang.Object (count actions))]
-    (io! (.processBatch (get-connection)
-			actions
-			(encode-value table :string)
-			(get-action-executor)
-			results))
+    (let [exec (get-action-executor)]
+      (println (format "Executor: complete:%s active:%s (core:%s cursize:%s qsize:%s)"
+		       (.getCompletedTaskCount exec) (.getActiveCount exec)
+		       (.getCorePoolSize exec) (.getPoolSize exec)
+		       (.size (.getQueue exec))))
+      (io! (.processBatch (get-connection)
+			  actions
+			  (encode-value table :string)
+			  exec
+			  results)))
     results))
 
 (defn make-puts
@@ -213,17 +218,15 @@
 
 (defn make-gets
   ([table schema records]
-     (doall
-      (map (fn [rec]
-	     (if (sequential? rec)
-	       (make-get table schema (first rec) (second rec))
-	       (make-get table schema rec nil)))
-	   records)))
+     (map (fn [rec]
+	    (if (sequential? rec)
+	      (make-get table schema (first rec) (second rec))
+	      (make-get table schema rec nil)))
+	  records))
   ([table schema records constraints]
-     (doall
       (map (fn [rec]
 	     (make-get table schema rec constraints))
-	   records))))
+	   records)))
 
 (defn get-multi
   "Similar to put multi, except the input records are [[row <options>] ...]
@@ -231,13 +234,15 @@
   ([table records]
      (let [schema (table-schema table)
 	   gets (make-gets table schema records)]
-       (map (partial decode-latest schema)
-	    (process-batch table gets))))
+       (doall
+	(map (partial decode-latest schema)
+	     (process-batch table gets)))))
   ([table records common-constraints]
      (let [schema (table-schema table)
 	   gets (make-gets table schema records common-constraints)]
-       (map (partial decode-latest schema)
-	    (process-batch table gets)))))
+       (doall
+	(map (partial decode-latest schema)
+	     (process-batch table gets))))))
 
 	
 ;; ==================================

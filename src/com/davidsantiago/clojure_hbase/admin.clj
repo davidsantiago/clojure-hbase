@@ -14,9 +14,10 @@
 (defn get-admin
   "Enforce a lazy create-once policy"
   []
-  (if-let [admin @*admin*] admin
-	  (alter-var-root *admin* (fn [old] (if old old
-						(HBaseAdmin. (HBaseConfiguration.)))))))
+  (if-let [admin *admin*] admin
+	  (alter-var-root #'*admin* (fn [old]
+				      (if old old
+					  (HBaseAdmin. (HBaseConfiguration.)))))))
 
 ;;
 ;; HColumnDescriptor
@@ -42,7 +43,7 @@
       (condp = (first spec)
 	:block-cache-enabled      (.setBlockCacheEnabled cd (second spec))
 	:block-size               (.setBlockSize cd (second spec))
-	:bloom-filter             (.setBloomFilter cd (second spec))
+	:bloom-filter             (.setBloomFilterType cd (second spec))
 	:compression-type         (.setCompressionType cd (second spec))
 	:in-memory                (.setInMemory cd (second spec))
 	:map-file-index-interval  (.setMapFileIndexInterval cd (second spec))
@@ -91,8 +92,10 @@
   (.compact (get-admin) (to-bytes table-or-region-name)))
 
 (defn create-table
-  [table-descriptor]
-  (.createTable (get-admin) table-descriptor))
+  ([table-descriptor]
+     (.createTable (get-admin) table-descriptor))
+  ([table-descriptor start end regions]
+     (.createTable (get-admin) table-descriptor start end regions)))
 
 (defn create-table-async
   [table-descriptor]

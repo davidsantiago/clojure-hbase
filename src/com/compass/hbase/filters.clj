@@ -214,16 +214,17 @@
 	   
 (defmethod make-filter :column
   [schema [type [compare [family qualifier value]]]]
-  (SingleColumnValueFilter.
-    (encode-family schema family)
-    (encode-column schema family qualifier)
-    (lookup-compare compare)
-    (as-comparator compare (encode-cell schema family qualifier value))))
+  (doto (SingleColumnValueFilter.
+	 (encode-family schema family)
+	 (encode-column schema family qualifier)
+	 (lookup-compare compare)
+	 (as-comparator compare (encode-cell schema family qualifier value)))
+    (.setFilterIfMissing true)))
 			     
 (defmethod make-filter :cell
   [schema [type [compare [value encoding]]]]
   (ValueFilter. (lookup-compare compare)
-		(as-comparator compare value)));;(encode-value value encoding))))
+		(as-comparator compare value))) ;;(encode-value value encoding))))
 
 (defmethod make-filter :keys-only
   [schema [type [rest]]]
