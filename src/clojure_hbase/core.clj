@@ -562,3 +562,17 @@
   (let [s (apply scan* args)]
     (io!
      (scanner table s))))
+
+(defn inc-col-value
+  "Atomically increment a column value."
+  ([#^HTable table row family qualifier]
+     (inc-col-value table row family qualifier 1))
+  ([#^HTable table row family qualifier amount]
+     (inc-col-value table row family qualifier amount true))
+  ([#^HTable table row family qualifier amount write-to-WAL]
+     (.incrementColumnValue table
+                            (to-bytes row)
+                            (to-bytes family)
+                            (to-bytes qualifier)
+                            (long amount)
+                            (boolean write-to-WAL))))
