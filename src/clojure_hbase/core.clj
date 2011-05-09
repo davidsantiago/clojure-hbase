@@ -7,6 +7,14 @@
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
 
+;; taken from
+;; http://gertalot.com/2011/04/29/find-the-arity-of-a-clojure-function/
+(defn arity [f]
+  (when (fn? f)
+    (let [m (first (.getDeclaredMethods (class f)))
+          p (.getParameterTypes m)]
+      (alength p))))
+
 (defvar- put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
 (defvar- get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))
 (defvar- delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
@@ -68,7 +76,11 @@
 
    Functions can be passed in with arguments :map-family, :map-qualifier,
    :map-timestamp, and :map-value. You can also use :map-default to pick a
-   default function, which will be overriden by the more specific directives."
+   default function, which will be overriden by the more specific directives.
+
+   If the :map-value function is binary, then the second argument
+   is the result of :map-qualifier. This can be useful for casting
+   results based on the column."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
         default-fn   (map-get options :map-default identity)
@@ -82,7 +94,9 @@
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
-              value     (value-fn (.getValue kv))]
+              value     (condp = (arity value-fn)
+                            1 (value-fn (.getValue kv))
+                            2 (value-fn (.getValue kv) qualifier))]
           (recur (next remaining-kvs)
                  (assoc-in kv-map [family qualifier timestamp] value)))
         kv-map))))
@@ -93,7 +107,11 @@
 
    Functions can be passed in with arguments :map-family, :map-qualifier,
    and :map-value. You can also use :map-default to pick a default function,
-   which will be overriden by the more specific directives."
+   which will be overriden by the more specific directives.
+
+   If the :map-value function is binary, then the second argument
+   is the result of :map-qualifier. This can be useful for casting
+   results based on the column."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
         default-fn   (map-get options :map-default identity)
@@ -115,7 +133,12 @@
             (recur (next remaining-keys)
                    (assoc-in kv-map [(family-fn family)
                                      (qualifier-fn qualifier)]
-                             (value-fn (.getValue result family qualifier))))
+                             (condp = (arity value-fn)
+                                 1 (value-fn
+                                    (.getValue result family qualifier))
+                                 2 (value-fn
+                                    (.getValue result family qualifier)
+                                    (qualifier-fn qualifier)))))
             kv-map))))))
 
 (defn as-vector
@@ -125,7 +148,11 @@
 
    Functions can be passed in with arguments :map-family, :map-qualifier,
    :map-timestamp, and :map-value. You can also use :map-default to pick a
-   default function, which will be overriden by the more specific directives."
+   default function, which will be overriden by the more specific directives.
+
+   If the :map-value function is binary, then the second argument
+   is the result of :map-qualifier. This can be useful for casting
+   results based on the column."
   [#^Result result & args]
   (let [options      (into {} (map vec (partition 2 args)))
         default-fn   (map-get options :map-default identity)
@@ -139,7 +166,9 @@
         (let [family    (family-fn (.getFamily kv))
               qualifier (qualifier-fn (.getQualifier kv))
               timestamp (timestamp-fn (.getTimestamp kv))
-              value     (value-fn (.getValue kv))]
+              value     (condp = (arity value-fn)
+                            1 (value-fn (.getValue kv))
+                            2 (value-fn (.getValue kv) qualifier))]
           (recur (next remaining-kvs)
                  (conj! kv-vec [family qualifier timestamp value])))
         (persistent! kv-vec)))))
