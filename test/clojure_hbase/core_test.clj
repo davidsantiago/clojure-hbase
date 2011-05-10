@@ -114,3 +114,50 @@
                              :map-qualifier #(Bytes/toString %)
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
+
+(deftest as-map-value-args-test
+  (let [cf-name "test-cf-name"
+        qual    "testqual"
+        row     "testrow"
+        value   "testval"]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :value [cf-name qual value])
+       (is (= qual
+              (first (vals (get-in (as-map (get test-tbl row)
+                                           :map-family    #(Bytes/toString %)
+                                           :map-qualifier #(Bytes/toString %)
+                                           :map-timestamp str
+                                           :map-value     #(str %2))
+                                   [cf-name qual]))))
+           "as-map works.")
+       (is (= {cf-name {qual qual}}
+              (latest-as-map (get test-tbl row)
+                             :map-family    #(Bytes/toString %)
+                             :map-qualifier #(Bytes/toString %)
+                             :map-value     #(str %2)))
+           "latest-as-map works.")))))
+
+(deftest increment
+  (let [cf-name "test-cf-name"
+        row     "testrow"
+        value   40]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (inc-col-value test-tbl row cf-name :testqual value)
+       (is (= 42
+              (inc-col-value test-tbl row cf-name :testqual 2)
+              (second (first (second (first (latest-as-map
+                                     (get test-tbl row :column
+                                          [cf-name :testqual])
+                                     :map-value #(Bytes/toLong %)
+                                     )))))
+              )
+           "Successfully executed increment.")))))
+
