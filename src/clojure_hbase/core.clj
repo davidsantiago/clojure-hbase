@@ -302,12 +302,13 @@
    :columns specifier (ie, :columns [:family [:col1 :col2 :col3]]). Returns
    the get operation, but remember, it is mutable. Note that this function
    is also used by the bindings for Scan, since they have the same functions."
-  [^Get get-op columns]
+  [get-op columns]
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
         (.addColumn get-op (to-bytes family) (to-bytes q)))))
   get-op)
+
 
 (defn get*
   "Returns a Get object suitable for performing a get on an HTable. To make
