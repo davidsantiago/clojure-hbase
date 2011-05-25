@@ -7,13 +7,6 @@
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
 
-;; taken from
-;; http://gertalot.com/2011/04/29/find-the-arity-of-a-clojure-function/
-(defn arity [f]
-  (when (fn? f)
-    (let [m (first (.getDeclaredMethods (class f)))
-          p (.getParameterTypes m)]
-      (alength p))))
 
 (defvar- put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
 (defvar- get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))

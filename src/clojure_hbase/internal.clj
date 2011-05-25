@@ -19,3 +19,13 @@
         (let [[a-cmd rest-cmds] (split-at (inc (map-get cmd-argnum-map kw 1))
                                           remaining-commands)]
           (recur (conj result a-cmd) rest-cmds))))))
+
+;; based on
+;; http://gertalot.com/2011/04/29/find-the-arity-of-a-clojure-function/
+(defn arity [f]
+  (when (fn? f)
+    (let [m1 (first (.getDeclaredMethods (class f)))
+          m2 (second (.getDeclaredMethods (class f)))
+          p1 (.getParameterTypes m1)
+          p2 (.getParameterTypes m2)]
+      (max (alength p1) (alength p2)))))
