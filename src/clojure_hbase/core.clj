@@ -89,7 +89,8 @@
               timestamp (timestamp-fn (.getTimestamp kv))
               value     (condp = (arity value-fn)
                             1 (value-fn (.getValue kv))
-                            2 (value-fn (.getValue kv) qualifier))]
+                            2 (value-fn (.getValue kv) qualifier)
+                            3 (value-fn (.getValue kv) qualifier family))]
           (recur (next remaining-kvs)
                  (assoc-in kv-map [family qualifier timestamp] value)))
         kv-map))))
@@ -131,7 +132,11 @@
                                     (.getValue result family qualifier))
                                  2 (value-fn
                                     (.getValue result family qualifier)
-                                    (qualifier-fn qualifier)))))
+                                    (qualifier-fn qualifier))
+                                 3 (value-fn
+                                    (.getValue result family qualifier)
+                                    (qualifier-fn qualifier)
+                                    (family-fn family)))))
             kv-map))))))
 
 (defn as-vector
@@ -161,7 +166,8 @@
               timestamp (timestamp-fn (.getTimestamp kv))
               value     (condp = (arity value-fn)
                             1 (value-fn (.getValue kv))
-                            2 (value-fn (.getValue kv) qualifier))]
+                            2 (value-fn (.getValue kv) qualifier)
+                            3 (value-fn (.getValue kv) qualifier family))]
           (recur (next remaining-kvs)
                  (conj! kv-vec [family qualifier timestamp value])))
         (persistent! kv-vec)))))
