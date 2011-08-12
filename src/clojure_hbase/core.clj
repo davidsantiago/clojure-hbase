@@ -540,6 +540,7 @@
    :filter       1    ;; :filter <a filter you've made>
    :all-versions 0    ;; :all-versions
    :max-versions 1    ;; :max-versions <int>
+   :set-caching  1    ;; :set-caching <int>
    :time-range   1    ;; :time-range [start end]
    :time-stamp   1    ;; :time-stamp time
    :start-row    1    ;; :start-row row
@@ -577,6 +578,7 @@
           :filter       (.setFilter scan-op (second spec))
           :all-versions (.setMaxVersions scan-op)
           :max-versions (.setMaxVersions scan-op (second spec))
+          :set-caching  (.setCaching scan-op (second spec))
           :time-range   (apply #(.setTimeRange scan-op %1 %2) (second spec))
           :time-stamp   (.setTimeStamp scan-op (second spec))
           :start-row    (.setStartRow scan-op (to-bytes (second spec)))
