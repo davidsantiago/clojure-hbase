@@ -23,8 +23,9 @@
 ;; http://gertalot.com/2011/04/29/find-the-arity-of-a-clojure-function/
 (defn arity [f]
   (when (fn? f)
-    (let [m1 (first (.getDeclaredMethods (class f)))
-          m2 (second (.getDeclaredMethods (class f)))
-          p1 (.getParameterTypes m1)
-          p2 (.getParameterTypes m2)]
-      (max (alength p1) (alength p2)))))
+    (let [[m1 m2] (.getDeclaredMethods (class f))
+          lens (map #(if-let [p1 (and % (.getParameterTypes %))]
+                       (alength p1)
+                       0)
+                    [m1 m2])]
+      (apply max lens))))
