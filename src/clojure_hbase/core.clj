@@ -1,23 +1,26 @@
 (ns clojure-hbase.core
   (:refer-clojure :rename {get map-get})
-  (:use clojure.contrib.def
-        clojure-hbase.internal)
+  (:use clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants KeyValue]
            [org.apache.hadoop.hbase.client HTable
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
 
 
-(defvar- put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
-(defvar- get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))
-(defvar- delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
-(defvar- scan-class (Class/forName   "org.apache.hadoop.hbase.client.Scan"))
+(def ^{:private true}
+  put-class (Class/forName "org.apache.hadoop.hbase.client.Put"))
+(def ^{:private true}
+  get-class (Class/forName "org.apache.hadoop.hbase.client.Get"))
+(def ^{:private true}
+  delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
+(def ^{:private true}
+  scan-class (Class/forName "org.apache.hadoop.hbase.client.Scan"))
 
-(defvar- #^HTablePool *db* (atom nil)
-  "This holds the HTablePool reference for all users. Users never have to see
-   this, and the HBase API does not appear to me to allow configuration in code
-   nor the use of multiple databases simultaneously (configuration is driven by
-   the XML config files). So we just hide this detail from the user.")
+;; This holds the HTablePool reference for all users. Users never have to see
+;; this, and the HBase API does not appear to me to allow configuration in code
+;; nor the use of multiple databases simultaneously (configuration is driven by
+;; the XML config files). So we just hide this detail from the user.
+(def ^{:tag HTablePool :dynamic true :private true} *db* (atom nil))
 
 (defn- ^HTablePool htable-pool
   []
@@ -281,20 +284,22 @@
       :row-lock     (new Get row (:row-lock cons-opts))
       (new Get row))))
 
-(defvar- get-argnums
-  {:column       1    ;; :column [:family-name :qualifier]
-   :columns      1    ;; :columns [:family-name [:qual1 :qual2...]...]
-   :family       1    ;; :family :family-name
-   :families     1    ;; :families [:family1 :family2 ...]
-   :filter       1    ;; :filter <a filter you've made>
-   :all-versions 0    ;; :all-versions
-   :max-versions 1    ;; :max-versions <int>
-   :time-range   1    ;; :time-range [start end]
-   :time-stamp   1    ;; :time-stamp time
-   :row-lock     1    ;; :row-lock <a row lock you've got>
-   :use-existing 1}   ;; :use-existing <some Get you've made>
-  "This maps each get command to its number of arguments, for helping us
-   partition the command sequence.")
+(def ^{:private true
+       :doc "This maps each get command to its number of arguments, for helping
+             us partition the command sequence."}
+  get-argnums
+  {:column       1  ;; :column [:family-name :qualifier]
+   :columns      1  ;; :columns [:family-name [:qual1 :qual2...]...]
+   :family       1  ;; :family :family-name
+   :families     1  ;; :families [:family1 :family2 ...]
+   :filter       1  ;; :filter <a filter you've made>
+   :all-versions 0  ;; :all-versions
+   :max-versions 1  ;; :max-versions <int>
+   :time-range   1  ;; :time-range [start end]
+   :time-stamp   1  ;; :time-stamp time
+   :row-lock     1  ;; :row-lock <a row lock you've got>
+   :use-existing 1} ;; :use-existing <some Get you've made>
+  )
 
 (defn- handle-get-columns
   "Handles the case where a get operation has requested columns with the
@@ -345,14 +350,17 @@
 ;;  PUT
 ;;
 
-(defvar- put-argnums
+(def ^{:private true
+       :doc "This maps each put command to its number of arguments, for helping
+             us partition the command sequence."}
+
+  put-argnums
   {:value        1    ;; :value [:family :column <value>]
    :values       1    ;; :values [:family [:column1 value1 ...] ...]
    :write-to-WAL 1    ;; :write-to-WAL true/false
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1}   ;; :use-existing <a Put you've made>
-  "This maps each put command to its number of arguments, for helping us
-   partition the command sequence.")
+  )
 
 (defn- make-put
   "Makes a Put object, taking into account user directives, such as using
@@ -424,17 +432,19 @@
 ;; DELETE
 ;;
 
-(defvar- delete-argnums
+(def ^{:private true
+       :doc "This maps each delete command to its number of arguments, for
+             helping us partition the command sequence."}
+  delete-argnums
   {:column                1    ;; :column [:family-name :qualifier]
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
-   :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
+   :with-timestamp        2    ;; :with-timestamp <long> [:column [...]]
    :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1}   ;; :use-existing <a Put you've made>
-  "This maps each delete command to its number of arguments, for helping us
-   partition the command sequence.")
+  )
 
 (defn- make-delete
   "Makes a Delete object, taking into account user directives, such as using
@@ -532,7 +542,10 @@
 ;; SCAN
 ;;
 
-(defvar- scan-argnums
+(def ^{:private true
+       :doc "This maps each scan command to its number of arguments, for helping
+             us partition the command sequence."}
+  scan-argnums
   {:column       1    ;; :column [:family-name :qualifier]
    :columns      1    ;; :columns [:family-name [:qual1 :qual2...]...]
    :family       1    ;; :family :family-name
@@ -546,8 +559,7 @@
    :start-row    1    ;; :start-row row
    :stop-row     1    ;; :stop-row row
    :use-existing 1}   ;; :use-existing <some Get you've made>
-  "This maps each scan command to its number of arguments, for helping us
-   partition the command sequence.")
+  )
 
 (defn- make-scan
   [options]

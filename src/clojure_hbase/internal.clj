@@ -1,6 +1,5 @@
 (ns clojure-hbase.internal
-  (:refer-clojure :rename {get map-get})
-  (:use clojure.contrib.def))
+  (:refer-clojure :rename {get map-get}))
 
 ;; This file contains utility functions that probably won't be useful for
 ;; client code. Shouldn't need to use util. But hey, it's here if you want it.
@@ -24,8 +23,9 @@
 ;; http://gertalot.com/2011/04/29/find-the-arity-of-a-clojure-function/
 (defn arity [f]
   (when (fn? f)
-    (let [m1 (first (.getDeclaredMethods (class f)))
-          m2 (second (.getDeclaredMethods (class f)))
-          p1 (.getParameterTypes m1)
-          p2 (.getParameterTypes m2)]
-      (max (alength p1) (alength p2)))))
+    (let [[m1 m2] (.getDeclaredMethods (class f))
+          lens (map #(if-let [p1 (and % (.getParameterTypes %))]
+                       (alength p1)
+                       0)
+                    [m1 m2])]
+      (apply max lens))))
