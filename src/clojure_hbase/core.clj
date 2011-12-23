@@ -585,7 +585,7 @@
                                (second spec))
           :columns      (handle-get-columns scan-op (second spec))
           :family       (.addFamily scan-op (to-bytes (second spec)))
-          :families     (for [f (second spec)]
+          :families     (doseq [f (second spec)]
                           (.addFamily scan-op (to-bytes f)))
           :filter       (.setFilter scan-op (second spec))
           :all-versions (.setMaxVersions scan-op)
