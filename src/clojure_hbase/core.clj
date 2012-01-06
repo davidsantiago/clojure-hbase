@@ -522,9 +522,10 @@
           :with-timestamp-before (handle-delete-ts delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
-          :columns               (let [[family quals] (rest spec)]
-                                   (doseq [q quals]
-                                     (delete-column delete-op family q)))
+          :columns               (doseq [column (partition 2 (second spec))]
+                                   (let [[family quals] column]
+                                     (doseq [q quals]
+                                       (delete-column delete-op family q))))
           :family                (delete-family delete-op (second spec))
           :families              (doseq [f (rest spec)]
                                    (delete-family delete-op f))))
