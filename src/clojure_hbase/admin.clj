@@ -1,7 +1,6 @@
 (ns clojure-hbase.admin
   (:refer-clojure :rename {get map-get} :exclude [flush])
-  (:use clojure.contrib.def
-        clojure-hbase.core
+  (:use clojure-hbase.core
         clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants
             HTableDescriptor HColumnDescriptor]
@@ -9,13 +8,16 @@
            [org.apache.hadoop.hbase.util Bytes]
            [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(defvar- ^HBaseAdmin *admin* (HBaseAdmin. (HBaseConfiguration/create)))
+(def ^HBaseAdmin ^:dynamic ^{:private true} *admin*
+  (HBaseAdmin. (HBaseConfiguration/create)))
 
 ;;
 ;; HColumnDescriptor
 ;;
 
-(defvar- column-desc-argnums
+(def ^{:private true} column-desc-argnums
+  "This maps each get command to its number of arguments, for helping us
+   partition the command sequence."
   {:block-cache-enabled      1  ;; :block-cache-enabled <boolean>
    :block-size               1  ;; :block-size <int>
    :bloom-filter-type        1  ;; :bloom-filter <StoreFile.BloomType>
@@ -23,8 +25,7 @@
    :in-memory                1  ;; :in-memory <boolean>
    :max-versions             1  ;; :max-versions <int>
    :time-to-live             1} ;; :time-to-live <int>
-  "This maps each get command to its number of arguments, for helping us
-   partition the command sequence.")
+  )
 
 (defn column-descriptor
   [family-name & args]
@@ -44,13 +45,14 @@
 ;;
 ;; HTableDescriptor
 ;;
-(defvar- table-desc-argnums
+(def ^{:private true} table-desc-argnums
+  "This maps each get command to its number of arguments, for helping us
+   partition the command sequence."
   {:max-file-size         1  ;; :max-file-size <long>
    :mem-store-flush-size  1  ;; :mem-store-flush-size <long>
    :read-only             1  ;; :read-only <boolean>
    :family                1} ;; :family <HColumnDescriptor>
-  "This maps each get command to its number of arguments, for helping us
-   partition the command sequence.")
+  )
 
 (defn table-descriptor
   [table-name & args]
