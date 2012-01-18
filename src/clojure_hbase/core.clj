@@ -6,12 +6,16 @@
             HTablePool Get Put Delete Scan Result RowLock]
            [org.apache.hadoop.hbase.util Bytes]))
 
-(def put-class (Class/forName    "org.apache.hadoop.hbase.client.Put"))
-(def get-class (Class/forName    "org.apache.hadoop.hbase.client.Get"))
-(def delete-class (Class/forName "org.apache.hadoop.hbase.client.Delete"))
-(def scan-class (Class/forName   "org.apache.hadoop.hbase.client.Scan"))
+(def ^{:private true} put-class
+  (Class/forName "org.apache.hadoop.hbase.client.Put"))
+(def ^{:private true} get-class
+  (Class/forName "org.apache.hadoop.hbase.client.Get"))
+(def ^{:private true} delete-class
+  (Class/forName "org.apache.hadoop.hbase.client.Delete"))
+(def ^{:private true} scan-class
+  (Class/forName "org.apache.hadoop.hbase.client.Scan"))
 
-(def #^HTablePool ^:dynamic *db*
+(def #^HTablePool ^:dynamic ^{:private true} *db*
   "This holds the HTablePool reference for all users. Users never have to see
    this, and the HBase API does not appear to me to allow configuration in code
    nor the use of multiple databases simultaneously (configuration is driven by
@@ -253,7 +257,7 @@
       :row-lock     (new Get row (:row-lock cons-opts))
       (new Get row))))
 
-(def get-argnums
+(def ^{:private true} get-argnums
   "This maps each get command to its number of arguments, for helping us
    partition the command sequence."
   {:column       1    ;; :column [:family-name :qualifier]
@@ -317,7 +321,7 @@
 ;;  PUT
 ;;
 
-(def put-argnums
+(def ^{:private true} put-argnums
   "This maps each put command to its number of arguments, for helping us
    partition the command sequence."
   {:value        1    ;; :value [:family :column <value>]
@@ -397,7 +401,7 @@
 ;; DELETE
 ;;
 
-(def delete-argnums
+(def ^{:private true} delete-argnums
   "This maps each delete command to its number of arguments, for helping us
    partition the command sequence."
   {:column                1    ;; :column [:family-name :qualifier]
@@ -506,7 +510,7 @@
 ;; SCAN
 ;;
 
-(def scan-argnums
+(def ^{:private true} scan-argnums
   "This maps each scan command to its number of arguments, for helping us
    partition the command sequence."
   {:column       1    ;; :column [:family-name :qualifier]

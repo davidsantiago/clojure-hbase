@@ -8,13 +8,14 @@
            [org.apache.hadoop.hbase.util Bytes]
            [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(def ^HBaseAdmin ^:dynamic *admin* (HBaseAdmin. (HBaseConfiguration/create)))
+(def ^HBaseAdmin ^:dynamic ^{:private true} *admin*
+  (HBaseAdmin. (HBaseConfiguration/create)))
 
 ;;
 ;; HColumnDescriptor
 ;;
 
-(def column-desc-argnums
+(def ^{:private true} column-desc-argnums
   "This maps each get command to its number of arguments, for helping us
    partition the command sequence."
   {:block-cache-enabled      1  ;; :block-cache-enabled <boolean>
@@ -44,7 +45,7 @@
 ;;
 ;; HTableDescriptor
 ;;
-(def table-desc-argnums
+(def ^{:private true} table-desc-argnums
   "This maps each get command to its number of arguments, for helping us
    partition the command sequence."
   {:max-file-size         1  ;; :max-file-size <long>
