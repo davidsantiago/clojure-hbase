@@ -15,12 +15,12 @@
 (def ^{:private true} scan-class
   (Class/forName "org.apache.hadoop.hbase.client.Scan"))
 
-(def #^HTablePool ^:dynamic ^{:private true} *db*
-  "This holds the HTablePool reference for all users. Users never have to see
-   this, and the HBase API does not appear to me to allow configuration in code
-   nor the use of multiple databases simultaneously (configuration is driven by
-   the XML config files). So we just hide this detail from the user."
-   (atom nil))
+;; This holds the HTablePool reference for all users. Users never have to see
+;; this, and the HBase API does not appear to me to allow configuration in code
+;; nor the use of multiple databases simultaneously (configuration is driven by
+;; the XML config files). So we just hide this detail from the user.
+(def ^{:tag HTablePool :dynamic true :private true} *db*
+  (atom nil))
 
 (defn- ^HTablePool htable-pool
   []
@@ -257,9 +257,9 @@
       :row-lock     (new Get row (:row-lock cons-opts))
       (new Get row))))
 
+;; This maps each get command to its number of arguments, for helping us
+;; partition the command sequence.
 (def ^{:private true} get-argnums
-  "This maps each get command to its number of arguments, for helping us
-   partition the command sequence."
   {:column       1    ;; :column [:family-name :qualifier]
    :columns      1    ;; :columns [:family-name [:qual1 :qual2...]...]
    :family       1    ;; :family :family-name
@@ -270,8 +270,7 @@
    :time-range   1    ;; :time-range [start end]
    :time-stamp   1    ;; :time-stamp time
    :row-lock     1    ;; :row-lock <a row lock you've got>
-   :use-existing 1}   ;; :use-existing <some Get you've made>
-  )
+   :use-existing 1})  ;; :use-existing <some Get you've made>
 
 (defn- handle-get-columns
   "Handles the case where a get operation has requested columns with the
@@ -321,15 +320,14 @@
 ;;  PUT
 ;;
 
+;; This maps each put command to its number of arguments, for helping us
+;; partition the command sequence.
 (def ^{:private true} put-argnums
-  "This maps each put command to its number of arguments, for helping us
-   partition the command sequence."
   {:value        1    ;; :value [:family :column <value>]
    :values       1    ;; :values [:family [:column1 value1 ...] ...]
    :write-to-WAL 1    ;; :write-to-WAL true/false
    :row-lock     1    ;; :row-lock <a row lock you've got>
-   :use-existing 1}   ;; :use-existing <a Put you've made>
-  )
+   :use-existing 1})  ;; :use-existing <a Put you've made>
 
 (defn- make-put
   "Makes a Put object, taking into account user directives, such as using
@@ -401,9 +399,9 @@
 ;; DELETE
 ;;
 
+;; This maps each delete command to its number of arguments, for helping us
+;; partition the command sequence.
 (def ^{:private true} delete-argnums
-  "This maps each delete command to its number of arguments, for helping us
-   partition the command sequence."
   {:column                1    ;; :column [:family-name :qualifier]
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
@@ -411,8 +409,7 @@
    :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
    :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
    :row-lock              1    ;; :row-lock <a row lock you've got>
-   :use-existing          1}   ;; :use-existing <a Put you've made>
-  )
+   :use-existing          1})  ;; :use-existing <a Put you've made>
 
 (defn- make-delete
   "Makes a Delete object, taking into account user directives, such as using
@@ -510,9 +507,9 @@
 ;; SCAN
 ;;
 
+;; This maps each scan command to its number of arguments, for helping us
+;; partition the command sequence.
 (def ^{:private true} scan-argnums
-  "This maps each scan command to its number of arguments, for helping us
-   partition the command sequence."
   {:column       1    ;; :column [:family-name :qualifier]
    :columns      1    ;; :columns [:family-name [:qual1 :qual2...]...]
    :family       1    ;; :family :family-name
@@ -524,8 +521,7 @@
    :time-stamp   1    ;; :time-stamp time
    :start-row    1    ;; :start-row row
    :stop-row     1    ;; :stop-row row
-   :use-existing 1}   ;; :use-existing <some Get you've made>
-  )
+   :use-existing 1})  ;; :use-existing <some Get you've made>
 
 (defn- make-scan
   [options]
