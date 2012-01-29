@@ -4,25 +4,28 @@ Clojure-HBase is a simple library for accessing HBase conveniently from Clojure.
 
 ## Introduction
 
-There are now a number of Clojure libraries for accessing HBase. This project
-provides the first two.
+Clojure-HBase has two main pieces of functionality. The first provides
+a low-level wrapping of the main HBase "CRUD" Java API. While it
+reflects the fundamental API conventions of HBase with little or no
+elaboration, it does provide macros and functions to remove any need
+for the extensive Java interop necessary to use the main API in most
+cases. This library is most useful for someone who wants to code to
+HBase at a low level, or as building blocks for a custom storage
+solution based on HBase.
 
-* [Clojure-HBase](http://github.com/davidsantiago/clojure-hbase) - Provides a 
-low-level wrapping of the main HBase "CRUD" Java API. While it
-reflects the fundamental API conventions of HBase with little or no elaboration,
-it does provide macros and functions to remove any need for the extensive Java 
-interop necessary to use the main API in most cases. This library is most useful
-for someone who wants to code to HBase at a low level, or as building blocks for
-a custom storage solution based on HBase.
-* [Clojure-HBase Admin](http://github.com/davidsantiago/clojure-hbase) - Provides
-a wrapper for most of the administrative functions useful for using HBase, such as
-creating, enabling, disabling, and deleting tables and column-families, as well
-as setting various options. These functions are widely useful to almost everyone
+The second piece provides a wrapper for most of the administrative
+functions useful for using HBase, such as creating, enabling,
+disabling, and deleting tables and column-families, as well as setting
+various options. These functions are widely useful to almost everyone
 using HBase.
-* [Clojure-HBase Schema](http://github.com/eslick/clojure-hbase) - Ian Eslick's
-HBase library provides a much higher level API for using HBase. This library
-builds abstractions on HBase to provide support for table schemas and constraints, 
-which make coding against HBase much nicer. 
+
+It's worth noting that there is a very interesting library by Ian
+Eslick, called
+[Clojure-HBase-Schemas](https://github.com/compasslabs/clojure-hbase-schemas),
+which provides a higher level API for using HBase. This opinionated
+library builds abstractions on HBase to provide client-only support
+for table schemas and constraints on stock, unmodified installations
+of HBase.
 
 ## Usage
 
@@ -156,6 +159,10 @@ is a vector of the form just mentioned:
 Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
 ## Lately...
+
+- Update to version 0.90.5, to indicate the latest version of HBase supported.
+  (0.92 support will follow when that is more widely released)
+- Updates so it works with Clojure 1.3 (1.2 still works). Thanks to [Christopher Miles](https://github.com/cmiles74) for this work.
 
 - Update API to HBase 0.90 series API.
 - Update to Clojure 1.2.
