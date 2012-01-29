@@ -1,6 +1,5 @@
 (ns clojure-hbase.internal
-  (:refer-clojure :rename {get map-get})
-  (:use clojure.contrib.def))
+  (:refer-clojure :rename {get map-get}))
 
 ;; This file contains utility functions that probably won't be useful for
 ;; client code. Shouldn't need to use util. But hey, it's here if you want it.

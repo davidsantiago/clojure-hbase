@@ -1,6 +1,7 @@
 (ns clojure-hbase.core-test
   (:refer-clojure :rename {get map-get})
   (:use clojure.test
+        clojure.stacktrace
         [clojure-hbase.core]
         [clojure-hbase.admin :exclude [flush]])
   (:import [org.apache.hadoop.hbase.util Bytes]
@@ -21,6 +22,7 @@
      (try
        (setup-tbl)
        ~@body
+       (catch Throwable t# (print-cause-trace t#))
        (finally
         (remove-tbl)))))
 
