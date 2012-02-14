@@ -26,7 +26,7 @@
   []
   (if-let [pool @*db*]
     pool
-    (swap! *db* (fn [_] (HTablePool.)))))
+    (swap! *db* (fn [curr-db] (or curr-db (HTablePool.))))))
 
 (defmulti to-bytes-impl
   "Converts its argument into an array of bytes. By default, uses HBase's
