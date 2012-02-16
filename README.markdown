@@ -160,6 +160,9 @@ Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
 ## Lately...
 
+- Update to version 0.90.5-1, with a race condition fix from [Homer
+  Strong](https://github.com/strongh).
+
 - Update to version 0.90.5, to indicate the latest version of HBase supported.
   (0.92 support will follow when that is more widely released)
 - Updates so it works with Clojure 1.3 (1.2 still works). Thanks to [Christopher Miles](https://github.com/cmiles74) for this work.
