@@ -1,4 +1,4 @@
-(defproject clojure-hbase "0.90.5-0.1.0"
+(defproject rplevy-draker/clojure-hbase "0.90.5-2"
   :description "A convenient Clojure interface to HBase."
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.apache.hadoop/hadoop-core "0.20.205.0"]

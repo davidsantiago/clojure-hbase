@@ -117,8 +117,6 @@
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
 
-;;;;;;(#'clojure-hbase.core/htable-pool))
-  
 (deftest test-set-config
   (as-test
    (is
