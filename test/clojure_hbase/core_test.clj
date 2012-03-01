@@ -117,24 +117,19 @@
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
 
-(defn- as-if-htable-first-run!
-  "create artificial conditions, as if htable-pool's first run"
-  []
-  (swap! @#'clojure-hbase.core/*db* (fn [_] nil))
-  (#'clojure-hbase.core/htable-pool))
+;;;;;;(#'clojure-hbase.core/htable-pool))
   
 (deftest test-set-config
   (as-test
    (is
-    (try (set-config "hbase.zookeeper.quorum" "asdsa") ;<- not valid
-         (as-if-htable-first-run!)
+    (try (set-config
+          (make-config "hbase.zookeeper.quorum" "asdsa")) ;<- not valid
          (table test-tbl-name) ;<- should raise exception
          false #_"<- fail if we got here, it should have thrown"
          (catch Exception e
            true)))
    (is
     (do
-      (set-config "hbase.zookeeper.quorum" "127.0.0.1") ;<- valid
-      (as-if-htable-first-run!)
-      (list-tables) ;<- it'll be fine!
-      true))))
+      (set-config
+       (make-config "hbase.zookeeper.quorum" "127.0.0.1")) ;<- valid
+      (table test-tbl-name)))))
