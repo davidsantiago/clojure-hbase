@@ -116,3 +116,16 @@
                              :map-qualifier #(Bytes/toString %)
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
+
+(deftest test-set-config
+  (as-test
+   (is
+    (try (set-config "hbase.zookeeper.quorum" "asdsa") ;<- not valid
+         (table test-tbl-name) ;<- should raise exception
+         false #_"<- fail if we got here, it should have thrown"
+         (catch Exception e
+           true)))
+   (is
+    (do
+      (set-config "hbase.zookeeper.quorum" "127.0.0.1") ;<- valid
+      (table test-tbl-name)))))
