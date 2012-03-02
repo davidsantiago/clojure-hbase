@@ -32,7 +32,7 @@
            kvs (concat [k v] kvs)]
        (assert (even? (count kvs)))
        (doseq [[k v] (partition 2 kvs)]
-         (.set config-obj k v))
+         (.set config-obj (name k) v))
        (swap! *db* (fn [_]
                      (HTablePool. config-obj Integer/MAX_VALUE))))))
   
