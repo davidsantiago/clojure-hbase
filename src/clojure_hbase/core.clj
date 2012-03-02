@@ -20,37 +20,22 @@
 (def ^{:tag HTablePool :dynamic true :private true} *db*
   (atom nil))
 
-(defn make-config
-  "does the work of creating the configuration object from the options,
-   and lets you hold onto it
+(defn set-config
+  "resets the *db* atom, so that subsequent calls to htable-pool
+   use the new configuration.
 
-   example: (make-config
+   example: (set-config
               \"hbase.zookeeper.dns.interface\" \"lo\"
               \"hbase.zookeeper.quorum\" \"127.0.0.1\")"
-  ([]
-     (HBaseConfiguration/create))
-  ([k v]
-     (doto (make-config) (.set k v)))
   ([k v & kvs]
-     (let [config-obj (make-config)
+     (let [config-obj (HBaseConfiguration/create)
            kvs (concat [k v] kvs)]
        (assert (even? (count kvs)))
        (doseq [[k v] (partition 2 kvs)]
          (.set config-obj k v))
-       config-obj)))
-
-(defn set-config
-  "takes an HBaseConfiguration and sets that to be the currently
-   active one, by reseting the *db* atom, so that subsequent calls
-   to htable-pool use the new configuration.
-
-   example: (set-config
-              (make-config
-                \"hbase.zookeeper.dns.interface\" \"lo\"
-                \"hbase.zookeeper.quorum\" \"127.0.0.1\"))"
-  [config-obj]
-  (swap! *db* (fn [_] (HTablePool. config-obj Integer/MAX_VALUE))))
-
+       (swap! *db* (fn [_]
+                     (HTablePool. config-obj Integer/MAX_VALUE))))))
+  
 (defn- ^HTablePool htable-pool
   []
   (if-let [pool @*db*]
