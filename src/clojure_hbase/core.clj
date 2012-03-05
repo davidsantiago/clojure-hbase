@@ -16,12 +16,26 @@
   (Class/forName "org.apache.hadoop.hbase.client.Scan"))
 
 ;; This holds the HTablePool reference for all users. Users never have to see
-;; this, and the HBase API does not appear to me to allow configuration in code
-;; nor the use of multiple databases simultaneously (configuration is driven by
-;; the XML config files). So we just hide this detail from the user.
+;; this, so we just hide this detail from the user.
 (def ^{:tag HTablePool :dynamic true :private true} *db*
   (atom nil))
 
+(defn set-config
+  "resets the *db* atom, so that subsequent calls to htable-pool
+   use the new configuration.
+
+   example: (set-config
+              \"hbase.zookeeper.dns.interface\" \"lo\"
+              \"hbase.zookeeper.quorum\" \"127.0.0.1\")"
+  ([k v & kvs]
+     (let [config-obj (HBaseConfiguration/create)
+           kvs (concat [k v] kvs)]
+       (assert (even? (count kvs)))
+       (doseq [[k v] (partition 2 kvs)]
+         (.set config-obj (name k) v))
+       (swap! *db* (fn [_]
+                     (HTablePool. config-obj Integer/MAX_VALUE))))))
+  
 (defn- ^HTablePool htable-pool
   []
   (if-let [pool @*db*]
