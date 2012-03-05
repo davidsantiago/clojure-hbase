@@ -17,7 +17,7 @@
 
 ;; This holds the HTablePool reference for all users. Users never have to see
 ;; this, so we just hide this detail from the user.
-(def ^{:tag HTablePool :dynamic true :private true} *db*
+(def ^{:dynamic true :private true} *db*
   (atom nil))
 
 (defn set-config
