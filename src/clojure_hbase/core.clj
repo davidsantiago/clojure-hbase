@@ -16,12 +16,33 @@
   (Class/forName "org.apache.hadoop.hbase.client.Scan"))
 
 ;; This holds the HTablePool reference for all users. Users never have to see
-;; this, and the HBase API does not appear to me to allow configuration in code
-;; nor the use of multiple databases simultaneously (configuration is driven by
-;; the XML config files). So we just hide this detail from the user.
-(def ^{:tag HTablePool :dynamic true :private true} *db*
+;; this, so we just hide this detail from the user.
+(def ^{:dynamic true :private true} *db*
   (atom nil))
 
+;; There doesn't appear to be, as far as I can tell, a way to get the current
+;; HBaseConfiguration being used by an HTablePool. Unfortunately, this means
+;; you need to remember and keep track of this yourself, if you want to be
+;; switching them around.
+(defn default-config
+  "Returns the default HBaseConfiguration as a map."
+  []
+  (into {} (HBaseConfiguration/create)))
+
+(defn set-config
+  "Resets the *db* atom, so that subsequent calls to htable-pool
+   use the new configuration.
+
+   Example: (set-config
+              {\"hbase.zookeeper.dns.interface\" \"lo\"
+              :hbase.zookeeper.quorum \"127.0.0.1\"})"
+  [config-map]
+  (let [config-obj (HBaseConfiguration/create)]
+    (doseq [[k v] (seq config-map)]
+      (.set config-obj (name k) (name v)))
+    (swap! *db* (fn [_]
+                  (HTablePool. config-obj Integer/MAX_VALUE)))))
+  
 (defn- ^HTablePool htable-pool
   []
   (if-let [pool @*db*]
