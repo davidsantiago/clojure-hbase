@@ -8,8 +8,13 @@
            [org.apache.hadoop.hbase.util Bytes]
            [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(def ^{:tag HBaseAdmin :dynamic true :private true} *admin*
-  (HBaseAdmin. (HBaseConfiguration/create)))
+(def ^{:tag HBaseAdmin :dynamic true} *admin*
+  (atom nil))
+
+(defn hbase-admin []
+  (when-not @*admin*
+    (swap! *admin* #(or % (HBaseAdmin. (HBaseConfiguration/create)))))
+  @*admin*)
 
 ;;
 ;; HColumnDescriptor
@@ -72,7 +77,7 @@
 
 (defn add-column-family
   [table-name ^HColumnDescriptor column-descriptor]
-  (.addColumn *admin* (to-bytes table-name) column-descriptor))
+  (.addColumn (hbase-admin) (to-bytes table-name) column-descriptor))
 
 (defn hbase-available?
   []
@@ -80,93 +85,93 @@
 
 (defn compact
   [table-or-region-name]
-  (.compact *admin* (to-bytes table-or-region-name)))
+  (.compact (hbase-admin) (to-bytes table-or-region-name)))
 
 (defn create-table
   [table-descriptor]
-  (.createTable *admin* table-descriptor))
+  (.createTable (hbase-admin) table-descriptor))
 
 (defn create-table-async
   [^HTableDescriptor table-descriptor split-keys]
-  (.createTableAsync *admin* table-descriptor split-keys))
+  (.createTableAsync (hbase-admin) table-descriptor split-keys))
 
 (defn delete-column-family
   [table-name column-name]
-  (.deleteColumn *admin* (to-bytes table-name) (to-bytes column-name)))
+  (.deleteColumn (hbase-admin) (to-bytes table-name) (to-bytes column-name)))
 
 (defn delete-table
   [table-name]
-  (.deleteTable *admin* (to-bytes table-name)))
+  (.deleteTable (hbase-admin) (to-bytes table-name)))
 
 (defn disable-table
   [table-name]
-  (.disableTable *admin* (to-bytes table-name)))
+  (.disableTable (hbase-admin) (to-bytes table-name)))
 
 (defn enable-table
   [table-name]
-  (.enableTable *admin* (to-bytes table-name)))
+  (.enableTable (hbase-admin) (to-bytes table-name)))
 
 (defn flush
   [table-or-region-name]
-  (.flush *admin* (to-bytes table-or-region-name)))
+  (.flush (hbase-admin) (to-bytes table-or-region-name)))
 
 (defn cluster-status
   []
-  (.getClusterStatus *admin*))
+  (.getClusterStatus (hbase-admin)))
 
 (defn get-connection
   []
-  (.getConnection *admin*))
+  (.getConnection (hbase-admin)))
 
 (defn get-master
   []
-  (.getMaster *admin*))
+  (.getMaster (hbase-admin)))
 
 (defn get-table-descriptor
   [table-name]
-  (.getTableDescriptor *admin* (to-bytes table-name)))
+  (.getTableDescriptor (hbase-admin) (to-bytes table-name)))
 
 (defn master-running?
   []
-  (.isMasterRunning *admin*))
+  (.isMasterRunning (hbase-admin)))
 
 (defn table-available?
   [table-name]
-  (.isTableAvailable *admin* (to-bytes table-name)))
+  (.isTableAvailable (hbase-admin) (to-bytes table-name)))
 
 (defn table-disabled?
   [table-name]
-  (.isTableDisabled *admin* (to-bytes table-name)))
+  (.isTableDisabled (hbase-admin) (to-bytes table-name)))
 
 (defn table-enabled?
   [table-name]
-  (.isTableEnabled *admin* (to-bytes table-name)))
+  (.isTableEnabled (hbase-admin) (to-bytes table-name)))
 
 (defn list-tables
   []
-  (seq (.listTables *admin*)))
+  (seq (.listTables (hbase-admin))))
 
 (defn major-compact
   [table-or-region-name]
-  (.majorCompact *admin* (to-bytes table-or-region-name)))
+  (.majorCompact (hbase-admin) (to-bytes table-or-region-name)))
 
 (defn modify-column-family
   [table-name column-name ^HColumnDescriptor column-descriptor]
-  (.modifyColumn *admin* (to-bytes table-name) (to-bytes column-name)
+  (.modifyColumn (hbase-admin) (to-bytes table-name) (to-bytes column-name)
                  column-descriptor))
 
 (defn modify-table
   [table-name table-descriptor]
-  (.modifyTable *admin* (to-bytes table-name) table-descriptor))
+  (.modifyTable (hbase-admin) (to-bytes table-name) table-descriptor))
 
 (defn shutdown
   []
-  (.shutdown *admin*))
+  (.shutdown (hbase-admin)))
 
 (defn split
   [table-or-region-name]
-  (.split *admin* (to-bytes table-or-region-name)))
+  (.split (hbase-admin) (to-bytes table-or-region-name)))
 
 (defn table-exists?
   [table-name]
-  (.tableExists *admin* (to-bytes table-name)))
+  (.tableExists (hbase-admin) (to-bytes table-name)))
