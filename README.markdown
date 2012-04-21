@@ -160,6 +160,8 @@ Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
 ## Lately...
 
+- Update to version 0.90.5-3, which makes the HBaseAdmin object rebindable. Work by [Ryan Senior](https://github.com/senior).
+
 - Update to version 0.90.5-2, with the addition of set-config and default-config, to programmatically chanage HBase's configuration. Work by [Robert Levy](https://github.com/rplevy-draker).
 
 - Update to version 0.90.5-1, with a race condition fix from [Homer
