@@ -293,6 +293,17 @@
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1})  ;; :use-existing <some Get you've made>
 
+(defprotocol AddColumn
+  (add-column [operation family-bytes qualifier-bytes]))
+
+(extend-protocol AddColumn
+  Get
+  (add-column [get-op family-bytes qualifier-bytes]
+    (.addColumn get-op family-bytes qualifier-bytes))
+  Scan
+  (add-column [scan-op family-bytes qualifier-bytes]
+    (.addColumn scan-op family-bytes qualifier-bytes)))
+
 (defn- handle-get-columns
   "Handles the case where a get operation has requested columns with the
    :columns specifier (ie, :columns [:family [:col1 :col2 :col3]]). Returns
@@ -302,7 +313,7 @@
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
-        (.addColumn get-op (to-bytes family) (to-bytes q)))))
+        (add-column get-op (to-bytes family) (to-bytes q)))))
   get-op)
 
 (defn get*
