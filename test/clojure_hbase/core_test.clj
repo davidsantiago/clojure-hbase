@@ -62,18 +62,22 @@
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
         row     "testrow"
-        value   "testval"]
+        rowvalue   [[:test-cf-name :testqual nil :testval]]]
     (as-test
      (disable-table test-tbl-name)
      (add-column-family test-tbl-name (column-descriptor cf-name))
      (enable-table test-tbl-name)
      (with-table [test-tbl (table test-tbl-name)]
-       (put test-tbl row :value [cf-name :testqual value])
-       (is (= [[:test-cf-name :testqual nil :testval]]
+       (put test-tbl row :value [cf-name :testqual :testval])
+       (is (= rowvalue
               (test-vector
                (get test-tbl row :column
                     [cf-name :testqual])))
-           "Successfully executed Put and Get.")
+           "Successfully executed Put :value and Get :column.")
+       (is (= rowvalue
+              (test-vector
+               (get test-tbl row :family :test-cf-name)))
+           "Successfully executed Get :family.")
        (delete test-tbl row :column [cf-name :testqual])
        (is (= '() (as-vector (get test-tbl row :column
                                   [cf-name :testqual])))
