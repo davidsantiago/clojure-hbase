@@ -11,6 +11,8 @@
 ;; configured running instance of HBase. Obviously, make sure this is not a
 ;; production version of HBase you're testing on.
 
+(defn keywordize [x] (keyword (Bytes/toString x)))
+
 (def test-tbl-name (str "clojure-hbase-test-db" (UUID/randomUUID)))
 (defn setup-tbl [] (create-table (table-descriptor test-tbl-name)))
 (defn remove-tbl []
@@ -71,29 +73,52 @@
            "Successfully executed Delete of the Put.")))))
 
 (deftest multicol-get-put-delete
-  (let [cf-name "test-cf-name"
-        row "testrow"
-        value [[:test-cf-name :testqual1 nil :testval1]
-               [:test-cf-name :testqual2 nil :testval2]]]
+  (let [row "testrow"
+        value [[:test-cf-name1 :test1qual1 nil :testval1]
+               [:test-cf-name1 :test1qual2 nil :testval2]
+               [:test-cf-name2 :test2qual1 nil :testval3]
+               [:test-cf-name2 :test2qual2 nil :testval4]]
+        subvalue [[:test-cf-name1 :test1qual1 nil :testval1]
+                  [:test-cf-name1 :test1qual2 nil :testval2]]]
     (as-test
      (disable-table test-tbl-name)
-     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (add-column-family test-tbl-name (column-descriptor "test-cf-name1"))
+     (add-column-family test-tbl-name (column-descriptor "test-cf-name2"))
      (enable-table test-tbl-name)
      (with-table [test-tbl (table test-tbl-name)]
-       (put test-tbl row :values [cf-name [:testqual1 "testval1"
-                                           :testqual2 "testval2"]])
+       (put test-tbl row :values [:test-cf-name1 [:test1qual1 "testval1"
+                                                  :test1qual2 "testval2"]
+                                  :test-cf-name2 [:test2qual1 "testval3"
+                                                  :test2qual2 "testval4"]])
        (is (= value (as-vector
-                     (get test-tbl row :columns
-                          [cf-name [:testqual1 :testqual2]])
-                     :map-family #(keyword (Bytes/toString %))
-                     :map-qualifier #(keyword (Bytes/toString %))
-                     :map-timestamp (fn [x] nil) ;; nil out timestamp
-                     :map-value #(keyword (Bytes/toString %))))
-           "Successfully Put and Get on multiple columns.")
-       (delete test-tbl row :columns [cf-name [:testqual1 :testqual2]])
+                     (get test-tbl row)
+                     :map-family keywordize
+                     :map-qualifier keywordize
+                     :map-timestamp (fn [x] nil)
+                     :map-value keywordize))
+           "Verified all columns were Put with an unqualified row Get.")
+       (is (= subvalue
+              (as-vector
+               (get test-tbl row :columns
+                    [:test-cf-name1 [:test1qual1 :test1qual2]])
+               :map-family keywordize
+               :map-qualifier keywordize
+               :map-timestamp (fn [x] nil) ;; nil out timestamp
+               :map-value keywordize))
+           "Successfully did a Get on subset of columns in row using :columns.")
+       (is (= subvalue (as-vector
+                     (get test-tbl row :families [:test-cf-name1])
+                     :map-family keywordize
+                     :map-qualifier keywordize
+                     :map-timestamp (fn [x] nil)
+                     :map-value keywordize))
+           "Successfully executed Get on subset of columns by :families.")
+       (delete test-tbl row :columns [:test-cf-name1 [:test1qual1 :test1qual2]
+                                      :test-cf-name2 [:test2qual1 :test2qual2]])
        (is (= '() (as-vector (get test-tbl row :columns
-                                  [cf-name [:testqual1 :testqual2]])))
-           "Successfully executed Delete of multiple columns.")))))
+                                  [:test-cf-name1 [:test1qual1 :test1qual2]
+                                   :test-cf-name2 [:test2qual1 :test2qual2]])))
+           "Successfully executed Delete of multiple cols using :columns.")))))
 
 (def scan-row-values (sort-by #(first %)
                               (for [k (range 10000)]
