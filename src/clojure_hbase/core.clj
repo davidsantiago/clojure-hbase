@@ -322,7 +322,7 @@
                                                     (to-bytes %1) (to-bytes %2))
                                        (second spec))
           :family       (.addFamily get-op (to-bytes (second spec)))
-          :families     (for [f (second spec)]
+          :families     (doseq [f (second spec)]
                           (.addFamily get-op (to-bytes f)))
           :filter       (.setFilter get-op (second spec))
           :all-versions (.setMaxVersions get-op)
