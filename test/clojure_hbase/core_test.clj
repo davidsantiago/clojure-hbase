@@ -149,7 +149,7 @@
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
 
-#_(deftest test-set-config
+(deftest test-set-config
   (try
     (as-test
      (is
