@@ -7,11 +7,18 @@
   (:import [org.apache.hadoop.hbase.util Bytes]
            [java.util UUID]))
 
+;; Testing Utilities
+
+(defn keywordize [x] (keyword (Bytes/toString x)))
+
+(defn test-vector
+  [result]
+  (as-vector result :map-family keywordize :map-qualifier keywordize
+             :map-timestamp (fn [x] nil) :map-value keywordize))
+
 ;; This file creates a table to do all its work in, and requires an already-
 ;; configured running instance of HBase. Obviously, make sure this is not a
 ;; production version of HBase you're testing on.
-
-(defn keywordize [x] (keyword (Bytes/toString x)))
 
 (def test-tbl-name (str "clojure-hbase-test-db" (UUID/randomUUID)))
 (defn setup-tbl [] (create-table (table-descriptor test-tbl-name)))
@@ -62,10 +69,10 @@
      (enable-table test-tbl-name)
      (with-table [test-tbl (table test-tbl-name)]
        (put test-tbl row :value [cf-name :testqual value])
-       (is (= value (Bytes/toString (last (first
-                                           (as-vector
-                                            (get test-tbl row :column
-                                                 [cf-name :testqual]))))))
+       (is (= [[:test-cf-name :testqual nil :testval]]
+              (test-vector
+               (get test-tbl row :column
+                    [cf-name :testqual])))
            "Successfully executed Put and Get.")
        (delete test-tbl row :column [cf-name :testqual])
        (is (= '() (as-vector (get test-tbl row :column
@@ -74,10 +81,10 @@
 
 (deftest multicol-get-put-delete
   (let [row "testrow"
-        value [[:test-cf-name1 :test1qual1 nil :testval1]
-               [:test-cf-name1 :test1qual2 nil :testval2]
-               [:test-cf-name2 :test2qual1 nil :testval3]
-               [:test-cf-name2 :test2qual2 nil :testval4]]
+        rowvalue [[:test-cf-name1 :test1qual1 nil :testval1]
+                  [:test-cf-name1 :test1qual2 nil :testval2]
+                  [:test-cf-name2 :test2qual1 nil :testval3]
+                  [:test-cf-name2 :test2qual2 nil :testval4]]
         subvalue [[:test-cf-name1 :test1qual1 nil :testval1]
                   [:test-cf-name1 :test1qual2 nil :testval2]]]
     (as-test
@@ -90,32 +97,18 @@
                                                   :test1qual2 "testval2"]
                                   :test-cf-name2 [:test2qual1 "testval3"
                                                   :test2qual2 "testval4"]])
-       (is (= value (as-vector
-                     (get test-tbl row)
-                     :map-family keywordize
-                     :map-qualifier keywordize
-                     :map-timestamp (fn [x] nil)
-                     :map-value keywordize))
+       (is (= rowvalue (test-vector (get test-tbl row)))
            "Verified all columns were Put with an unqualified row Get.")
        (is (= subvalue
-              (as-vector
-               (get test-tbl row :columns
-                    [:test-cf-name1 [:test1qual1 :test1qual2]])
-               :map-family keywordize
-               :map-qualifier keywordize
-               :map-timestamp (fn [x] nil) ;; nil out timestamp
-               :map-value keywordize))
+              (test-vector (get test-tbl row :columns
+                                [:test-cf-name1 [:test1qual1 :test1qual2]])))
            "Successfully did a Get on subset of columns in row using :columns.")
-       (is (= subvalue (as-vector
-                     (get test-tbl row :families [:test-cf-name1])
-                     :map-family keywordize
-                     :map-qualifier keywordize
-                     :map-timestamp (fn [x] nil)
-                     :map-value keywordize))
+       (is (= subvalue (test-vector (get test-tbl row
+                                         :families [:test-cf-name1])))
            "Successfully executed Get on subset of columns by :families.")
        (delete test-tbl row :columns [:test-cf-name1 [:test1qual1 :test1qual2]
                                       :test-cf-name2 [:test2qual1 :test2qual2]])
-       (is (= '() (as-vector (get test-tbl row :columns
+       (is (= '() (test-vector (get test-tbl row :columns
                                   [:test-cf-name1 [:test1qual1 :test1qual2]
                                    :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
