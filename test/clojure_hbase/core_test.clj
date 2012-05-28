@@ -70,6 +70,31 @@
                                   [cf-name :testqual])))
            "Successfully executed Delete of the Put.")))))
 
+(deftest multicol-get-put-delete
+  (let [cf-name "test-cf-name"
+        row "testrow"
+        value [[:test-cf-name :testqual1 nil :testval1]
+               [:test-cf-name :testqual2 nil :testval2]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :values [cf-name [:testqual1 "testval1"
+                                           :testqual2 "testval2"]])
+       (is (= value (as-vector
+                     (get test-tbl row :columns
+                          [cf-name [:testqual1 :testqual2]])
+                     :map-family #(keyword (Bytes/toString %))
+                     :map-qualifier #(keyword (Bytes/toString %))
+                     :map-timestamp (fn [x] nil) ;; nil out timestamp
+                     :map-value #(keyword (Bytes/toString %))))
+           "Successfully Put and Get on multiple columns.")
+       (delete test-tbl row :columns [cf-name [:testqual1 :testqual2]])
+       (is (= '() (as-vector (get test-tbl row :columns
+                                  [cf-name [:testqual1 :testqual2]])))
+           "Successfully executed Delete of multiple columns.")))))
+
 (def scan-row-values (sort-by #(first %)
                               (for [k (range 10000)]
                                 [(str (UUID/randomUUID))
