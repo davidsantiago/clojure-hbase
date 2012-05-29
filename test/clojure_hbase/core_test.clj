@@ -16,6 +16,11 @@
   (as-vector result :map-family keywordize :map-qualifier keywordize
              :map-timestamp (fn [x] nil) :map-value keywordize))
 
+(defn test-map
+  [result]
+  (latest-as-map result :map-family keywordize :map-qualifier keywordize
+                 :map-value #(Bytes/toString %)))
+
 ;; This file creates a table to do all its work in, and requires an already-
 ;; configured running instance of HBase. Obviously, make sure this is not a
 ;; production version of HBase you're testing on.
@@ -159,6 +164,12 @@
        (put test-tbl 1 :values [cf-name [:a "1" :b "2" :c "3" :d "4"]])
        (put test-tbl 2 :values [cf-name [:a "5" :b "6" :c "7" :d "8"]])
        (testing "a smaller set of columns returned"
+         (is (= [{:test-cf-name {:a "1"}}
+                 {:test-cf-name {:a "5"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :column [:test-cf-name :a])]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
          (is (= [{:test-cf-name {:a "1"
                                  :b "2"}}
                  {:test-cf-name {:a "5"
