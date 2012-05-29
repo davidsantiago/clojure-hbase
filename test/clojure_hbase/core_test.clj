@@ -172,26 +172,16 @@
                                                 :column [:test-cf-name1 :a])]
                 (doall (map test-map
                             (-> scan-results .iterator iterator-seq))))))
-       (is (= [{:test-cf-name1 {:a "1"
-                                :b "2"}}
-               {:test-cf-name1 {:a "5"
-                                :b "6"}}]
+       (is (= [{:test-cf-name1 {:a "1" :b "2"}}
+               {:test-cf-name1 {:a "5" :b "6"}}]
               (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name1 [:a :b]])]
                 (doall
-                 (map (fn [x] (latest-as-map x
-                                             :map-family    (comp keyword #(Bytes/toString %))
-                                             :map-qualifier (comp keyword #(Bytes/toString %))
-                                             :map-value     #(Bytes/toString %)))
-                        
+                 (map (fn [x] (test-map x))
                       (-> scan-results .iterator iterator-seq))))))
        (is (empty?
             (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name1 [:y :z]])]
               (doall
-               (map (fn [x] (latest-as-map x
-                                           :map-family    (comp keyword #(Bytes/toString %))
-                                           :map-qualifier (comp keyword #(Bytes/toString %))
-                                           :map-value     #(Bytes/toString %)))
-                        
+               (map (fn [x] (test-map x))
                     (-> scan-results .iterator iterator-seq))))))))))
 
 (deftest as-map-test
