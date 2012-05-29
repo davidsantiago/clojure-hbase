@@ -155,42 +155,44 @@
                              scan-row-values (seq scan-results))))))))))
 
 (deftest scan-limited-columns
-  (let [cf-name "test-cf-name"]
-    (as-test
-     (disable-table test-tbl-name)
-     (add-column-family test-tbl-name (column-descriptor cf-name))
-     (enable-table test-tbl-name)
-     (with-table [test-tbl (table test-tbl-name)]
-       (put test-tbl 1 :values [cf-name [:a "1" :b "2" :c "3" :d "4"]])
-       (put test-tbl 2 :values [cf-name [:a "5" :b "6" :c "7" :d "8"]])
-       (testing "a smaller set of columns returned"
-         (is (= [{:test-cf-name {:a "1"}}
-                 {:test-cf-name {:a "5"}}]
-                (with-scanner [scan-results (scan test-tbl
-                                                  :column [:test-cf-name :a])]
-                  (doall (map test-map
-                              (-> scan-results .iterator iterator-seq))))))
-         (is (= [{:test-cf-name {:a "1"
-                                 :b "2"}}
-                 {:test-cf-name {:a "5"
-                                 :b "6"}}]
-                (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name [:a :b]])]
-                  (doall
-                   (map (fn [x] (latest-as-map x
-                                              :map-family    (comp keyword #(Bytes/toString %))
-                                              :map-qualifier (comp keyword #(Bytes/toString %))
-                                              :map-value     #(Bytes/toString %)))
+  (as-test
+   (disable-table test-tbl-name)
+   (add-column-family test-tbl-name (column-descriptor :test-cf-name1))
+   (add-column-family test-tbl-name (column-descriptor :test-cf-name2))
+   (enable-table test-tbl-name)
+   (with-table [test-tbl (table test-tbl-name)]
+     (put test-tbl 1 :values [:test-cf-name1 [:a "1" :b "2" :c "3" :d "4"]])
+     (put test-tbl 2 :values [:test-cf-name1 [:a "5" :b "6" :c "7" :d "8"]])
+     (put test-tbl 3 :values [:test-cf-name2 [:z "5" :y "4" :x "3" :w "2"]])
+     (put test-tbl 4 :values [:test-cf-name2 [:z "2" :y "3" :x "4" :w "5"]])
+     (testing "a smaller set of columns returned"
+       (is (= [{:test-cf-name1 {:a "1"}}
+               {:test-cf-name1 {:a "5"}}]
+              (with-scanner [scan-results (scan test-tbl
+                                                :column [:test-cf-name1 :a])]
+                (doall (map test-map
+                            (-> scan-results .iterator iterator-seq))))))
+       (is (= [{:test-cf-name1 {:a "1"
+                                :b "2"}}
+               {:test-cf-name1 {:a "5"
+                                :b "6"}}]
+              (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name1 [:a :b]])]
+                (doall
+                 (map (fn [x] (latest-as-map x
+                                             :map-family    (comp keyword #(Bytes/toString %))
+                                             :map-qualifier (comp keyword #(Bytes/toString %))
+                                             :map-value     #(Bytes/toString %)))
                         
-                        (-> scan-results .iterator iterator-seq))))))
-         (is (empty?
-              (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name [:y :z]])]
-                  (doall
-                   (map (fn [x] (latest-as-map x
-                                              :map-family    (comp keyword #(Bytes/toString %))
-                                              :map-qualifier (comp keyword #(Bytes/toString %))
-                                              :map-value     #(Bytes/toString %)))
+                      (-> scan-results .iterator iterator-seq))))))
+       (is (empty?
+            (with-scanner [scan-results (scan test-tbl :columns [:test-cf-name1 [:y :z]])]
+              (doall
+               (map (fn [x] (latest-as-map x
+                                           :map-family    (comp keyword #(Bytes/toString %))
+                                           :map-qualifier (comp keyword #(Bytes/toString %))
+                                           :map-value     #(Bytes/toString %)))
                         
-                        (-> scan-results .iterator iterator-seq)))))))))))
+                    (-> scan-results .iterator iterator-seq))))))))))
 
 (deftest as-map-test
   (let [cf-name "test-cf-name"
