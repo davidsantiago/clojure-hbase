@@ -78,6 +78,17 @@
               (test-vector
                (get test-tbl row :family :test-cf-name)))
            "Successfully executed Get :family.")
+       (let [timestamp (-> (get test-tbl row :column
+                                [cf-name :testqual])
+                           (as-vector) (first) (nth 2))]
+         (is (= rowvalue (test-vector (get test-tbl row
+                                           :time-stamp timestamp)))
+             "Sucessfully executed Get :time-stamp")
+         (is (= rowvalue (test-vector
+                          (get test-tbl row
+                               :time-range [(dec timestamp) (inc timestamp)])))
+             "Successfully executed Get :time-range"))
+       ;; Delete the row
        (delete test-tbl row :column [cf-name :testqual])
        (is (= '() (as-vector (get test-tbl row :column
                                   [cf-name :testqual])))
