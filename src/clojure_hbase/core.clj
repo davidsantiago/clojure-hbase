@@ -293,17 +293,17 @@
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1})  ;; :use-existing <some Get you've made>
 
-(defn- handle-get-columns
-  "Handles the case where a get operation has requested columns with the
-   :columns specifier (ie, :columns [:family [:col1 :col2 :col3]]). Returns
-   the get operation, but remember, it is mutable. Note that this function
-   is also used by the bindings for Scan, since they have the same functions."
-  [^Get get-op columns]
+(defn- apply-columns
+  "The first argument should be a function of two arguments: a column family
+   name and a column name. The second argument should be the sequence specified
+   by a :columns [:family [:col1 :col2 :col3...] ...] spec (the outer vector in
+   the preceding example). apply-columns will perform the first argument on
+   every (column-family,column) pair specified in the second argument."
+  [func columns]
   (doseq [column (partition 2 columns)] ;; :family [:cols...] pairs.
     (let [[family qualifiers] column]
       (doseq [q qualifiers]
-        (.addColumn get-op (to-bytes family) (to-bytes q)))))
-  get-op)
+        (func family q)))))
 
 (defn get*
   "Returns a Get object suitable for performing a get on an HTable. To make
@@ -318,9 +318,11 @@
           :column       (apply #(.addColumn get-op
                                             (to-bytes %1) (to-bytes %2))
                                (second spec))
-          :columns      (handle-get-columns get-op (second spec))
+          :columns      (apply-columns #(.addColumn get-op
+                                                    (to-bytes %1) (to-bytes %2))
+                                       (second spec))
           :family       (.addFamily get-op (to-bytes (second spec)))
-          :families     (for [f (second spec)]
+          :families     (doseq [f (second spec)]
                           (.addFamily get-op (to-bytes f)))
           :filter       (.setFilter get-op (second spec))
           :all-versions (.setMaxVersions get-op)
@@ -508,9 +510,7 @@
           :with-timestamp-before (handle-delete-ts delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
-          :columns               (let [[family quals] (rest spec)]
-                                   (doseq [q quals]
-                                     (delete-column delete-op family q)))
+          :columns               (apply-columns delete-column (rest spec))
           :family                (delete-family delete-op (second spec))
           :families              (doseq [f (rest spec)]
                                    (delete-family delete-op f))))
@@ -566,9 +566,11 @@
           :column       (apply #(.addColumn scan-op
                                             (to-bytes %1) (to-bytes %2))
                                (second spec))
-          :columns      (handle-get-columns scan-op (second spec))
+          :columns      (apply-columns #(.addColumn scan-op
+                                                    (to-bytes %1) (to-bytes %2))
+                                       (second spec))
           :family       (.addFamily scan-op (to-bytes (second spec)))
-          :families     (for [f (second spec)]
+          :families     (doseq [f (second spec)]
                           (.addFamily scan-op (to-bytes f)))
           :filter       (.setFilter scan-op (second spec))
           :all-versions (.setMaxVersions scan-op)

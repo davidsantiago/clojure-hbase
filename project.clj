@@ -1,4 +1,4 @@
-(defproject clojure-hbase "0.90.5-3"
+(defproject clojure-hbase "0.90.5-4"
   :description "A convenient Clojure interface to HBase."
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.apache.hadoop/hadoop-core "0.20.205.0"]
@@ -9,5 +9,7 @@
                                                     com.sun.jdmk/jmxtools
                                                     com.sun.jmx/jmxri]]
                  [org.clojure/tools.logging "0.2.3"]]
-  :profiles {:clojure1.2 [[org.clojure/clojure "1.2.0"]]
-             :clojure1.3 [[org.clojure/clojure "1.3.0"]]})
+  :profiles {:clojure1.2 {:dependencies [[org.clojure/clojure "1.2.0"]]}
+             :clojure1.3 {:dependencies [[org.clojure/clojure "1.3.0"]]}
+             :hbase90 {:dependencies [[org.apache.hbase/hbase "0.90.5"]]}
+             :hbase92 {:dependencies [[org.apache.hbase/hbase "0.92.1"]]}})
