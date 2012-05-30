@@ -217,8 +217,65 @@
               (with-scanner [scan-results (scan test-tbl
                                                 :families [:test-cf-name1 :test-cf-name2])]
                 (doall (map test-map
-                            (-> scan-results .iterator iterator-seq)))))))
-     )))
+                            (-> scan-results .iterator iterator-seq))))))))))
+
+(deftest scan-by-time-and-row
+  (as-test
+   (disable-table test-tbl-name)
+   (add-column-family test-tbl-name (column-descriptor :test-cf-name1))
+   (add-column-family test-tbl-name (column-descriptor :test-cf-name2))
+   (enable-table test-tbl-name)
+   (with-table [test-tbl (table test-tbl-name)]
+     (put test-tbl 1 :values [:test-cf-name1 [:a "1"]])
+     (put test-tbl 2 :values [:test-cf-name1 [:a "5"]])
+     (put test-tbl 3 :values [:test-cf-name2 [:z "5"]])
+     (put test-tbl 4 :values [:test-cf-name2 [:z "2"]])
+     (let [timestamps (with-scanner [scan-results (scan test-tbl)]
+                        (doall (map #(-> (as-vector %) first (nth 2))
+                                    (-> scan-results .iterator iterator-seq))))]
+       (testing "select by timestamp"
+         ;; Remember, time-range is [start-time end-time); end is not inclusive.
+         (is (= [{:test-cf-name1 {:a "1"}}
+                 {:test-cf-name1 {:a "5"}}
+                 {:test-cf-name2 {:z "5"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :time-range [(apply min timestamps)
+                                                               (apply max timestamps)])]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
+         ;; Now grab the entire range.
+         (is (= [{:test-cf-name1 {:a "1"}}
+                 {:test-cf-name1 {:a "5"}}
+                 {:test-cf-name2 {:z "5"}}
+                 {:test-cf-name2 {:z "2"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :time-range [(apply min timestamps)
+                                                               (inc (apply max timestamps))])]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
+         (is (= [{:test-cf-name1 {:a "1"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :time-stamp (first timestamps))]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
+         (is (= [{:test-cf-name2 {:z "5"}}
+                 {:test-cf-name2 {:z "2"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :start-row 3)]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
+         ;; :stop-row is also not inclusive.
+         (is (= [{:test-cf-name1 {:a "1"}}
+                 {:test-cf-name1 {:a "5"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :stop-row 3)]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq))))))
+         (is (= [{:test-cf-name1 {:a "5"}}]
+                (with-scanner [scan-results (scan test-tbl
+                                                  :start-row 2 :stop-row 3)]
+                  (doall (map test-map
+                              (-> scan-results .iterator iterator-seq)))))))))))
 
 (deftest as-map-test
   (let [cf-name "test-cf-name"
