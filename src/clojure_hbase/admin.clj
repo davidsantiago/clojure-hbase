@@ -11,7 +11,7 @@
 (def ^{:tag HBaseAdmin :dynamic true} *admin*
   (atom nil))
 
-(defn hbase-admin []
+(defn hbase-admin ^HBaseAdmin []
   (when-not @*admin*
     (swap! *admin* #(or % (HBaseAdmin. (HBaseConfiguration/create)))))
   @*admin*)
