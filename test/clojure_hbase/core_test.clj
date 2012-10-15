@@ -62,7 +62,8 @@
      (delete-column-family test-tbl-name cf-name)
      (is (= nil (.getFamily (get-table-descriptor test-tbl-name)
                             (to-bytes cf-name)))
-         "Deleted the column family successfully."))))
+         "Deleted the column family successfully.")
+     (enable-table test-tbl-name))))
 
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
