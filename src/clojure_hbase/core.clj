@@ -510,7 +510,8 @@
           :with-timestamp-before (handle-delete-ts delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
-          :columns               (apply-columns delete-column (rest spec))
+          :columns               (apply-columns #(delete-column delete-op %1 %2)
+                                                (second spec))
           :family                (delete-family delete-op (second spec))
           :families              (doseq [f (rest spec)]
                                    (delete-family delete-op f))))
