@@ -126,11 +126,13 @@
        (is (= subvalue (test-vector (get test-tbl row
                                          :families [:test-cf-name1])))
            "Successfully executed Get on subset of columns by :families.")
-       (delete test-tbl row :columns [:test-cf-name1 [:test1qual1 :test1qual2]
-                                      :test-cf-name2 [:test2qual1 :test2qual2]])
-       (is (= '() (test-vector (get test-tbl row :columns
-                                  [:test-cf-name1 [:test1qual1 :test1qual2]
-                                   :test-cf-name2 [:test2qual1 :test2qual2]])))
+       (delete test-tbl row :columns [:test-cf-name1 [:test1qual1]
+                                      :test-cf-name2 [:test2qual1]])
+       (is (= [[:test-cf-name1 :test1qual2 nil :testval2]
+               [:test-cf-name2 :test2qual2 nil :testval4]]
+              (test-vector (get test-tbl row :columns
+                                [:test-cf-name1 [:test1qual1 :test1qual2]
+                                 :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
 
 (def scan-row-values (sort-by #(first %)
