@@ -309,15 +309,13 @@
 (deftest test-set-config
   (try
     (as-test
-     (is
-      (try (set-config {"hbase.zookeeper.quorum" "asdsa"}) ;<- not valid
-           (table test-tbl-name)        ;<- should raise exception
-           false #_"<- fail if we got here, it should have thrown"
-           (catch Exception e
-             true)))
-     (is
-      (do
-        (set-config {"hbase.zookeeper.quorum" "127.0.0.1"}) ;<- valid
-        (table test-tbl-name))))
+     (is (thrown? Exception
+                  (do
+                    (set-config (make-config {"hbase.zookeeper.quorum"
+                                              "asdsa"})) ;; not valid
+                    (table test-tbl-name)))) ;; This should throw an exception.
+     (is (do
+           (set-config (make-config {"hbase.zookeeper.quorum" "127.0.0.1"}))
+           (table test-tbl-name))))
     (finally
-     (set-config (default-config)))))
+     (set-config (make-config (default-config))))))
