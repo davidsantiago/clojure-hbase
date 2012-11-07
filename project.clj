@@ -1,9 +1,8 @@
-(defproject clojure-hbase "0.90.5-4"
+(defproject clojure-hbase "0.92.0"
   :description "A convenient Clojure interface to HBase."
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [org.apache.hadoop/hadoop-core "1.0.3"]
                  [org.apache.hbase/hbase "0.92.2"]
-                 #_[org.apache.zookeeper/zookeeper "3.3.2"]
                  [log4j/log4j "1.2.16" :exclusions [javax.mail/mail
                                                     javax.jms/jms
                                                     com.sun.jdmk/jmxtools
