@@ -158,7 +158,13 @@ is a vector of the form just mentioned:
 
 Basic unit tests passing. No known bugs. Bug reports and input welcome.
 
+It's a little difficult making a library that tracks software that still
+changes its API. I generally name the version after the earliest
+version I've tested against, but earlier ones may still work.
+
 ## Lately...
+
+- Update to version 0.92.0. Tested against 0.92 and 0.94 HBase. Includes a bug fix for the command to delete specific columns from [Dan Lidral-Porter](https://github.com/aperiodic) and a new, more flexible API for managing HBase's configuration programmatically from [Joel Kaasinen](https://github.com/opqdonut).
 
 - Update to version 0.90.5-4, which fixes numerous bugs and adds test cases. Includes fixes and tests from [Ryan Senior](https://github.com/senior).
 

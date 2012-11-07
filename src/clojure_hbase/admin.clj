@@ -16,6 +16,17 @@
     (swap! *admin* #(or % (HBaseAdmin. (HBaseConfiguration/create)))))
   @*admin*)
 
+(defn set-admin-config
+  "Resets the *admin* atom to a new HBaseAdmin object that uses the
+   given HBaseConfiguration.
+
+   Example: (set-admin-config
+              (make-config
+                {\"hbase.zookeeper.dns.interface\" \"lo\"
+                 :hbase.zookeeper.quorum \"127.0.0.1\"})"
+  [^HBaseConfiguration config-obj]
+  (reset! *admin* (HBaseAdmin. config-obj)))
+
 ;;
 ;; HColumnDescriptor
 ;;

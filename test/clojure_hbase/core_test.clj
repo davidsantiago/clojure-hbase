@@ -62,7 +62,8 @@
      (delete-column-family test-tbl-name cf-name)
      (is (= nil (.getFamily (get-table-descriptor test-tbl-name)
                             (to-bytes cf-name)))
-         "Deleted the column family successfully."))))
+         "Deleted the column family successfully.")
+     (enable-table test-tbl-name))))
 
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
@@ -126,11 +127,13 @@
        (is (= subvalue (test-vector (get test-tbl row
                                          :families [:test-cf-name1])))
            "Successfully executed Get on subset of columns by :families.")
-       (delete test-tbl row :columns [:test-cf-name1 [:test1qual1 :test1qual2]
-                                      :test-cf-name2 [:test2qual1 :test2qual2]])
-       (is (= '() (test-vector (get test-tbl row :columns
-                                  [:test-cf-name1 [:test1qual1 :test1qual2]
-                                   :test-cf-name2 [:test2qual1 :test2qual2]])))
+       (delete test-tbl row :columns [:test-cf-name1 [:test1qual1]
+                                      :test-cf-name2 [:test2qual1]])
+       (is (= [[:test-cf-name1 :test1qual2 nil :testval2]
+               [:test-cf-name2 :test2qual2 nil :testval4]]
+              (test-vector (get test-tbl row :columns
+                                [:test-cf-name1 [:test1qual1 :test1qual2]
+                                 :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
 
 (def scan-row-values (sort-by #(first %)
@@ -306,15 +309,13 @@
 (deftest test-set-config
   (try
     (as-test
-     (is
-      (try (set-config {"hbase.zookeeper.quorum" "asdsa"}) ;<- not valid
-           (table test-tbl-name)        ;<- should raise exception
-           false #_"<- fail if we got here, it should have thrown"
-           (catch Exception e
-             true)))
-     (is
-      (do
-        (set-config {"hbase.zookeeper.quorum" "127.0.0.1"}) ;<- valid
-        (table test-tbl-name))))
+     (is (thrown? Exception
+                  (do
+                    (set-config (make-config {"hbase.zookeeper.quorum"
+                                              "asdsa"})) ;; not valid
+                    (table test-tbl-name)))) ;; This should throw an exception.
+     (is (do
+           (set-config (make-config {"hbase.zookeeper.quorum" "127.0.0.1"}))
+           (table test-tbl-name))))
     (finally
-     (set-config (default-config)))))
+     (set-config (make-config (default-config))))))
