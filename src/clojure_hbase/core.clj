@@ -29,20 +29,30 @@
   []
   (into {} (HBaseConfiguration/create)))
 
-(defn set-config
-  "Resets the *db* atom, so that subsequent calls to htable-pool
-   use the new configuration.
+(defn make-config
+  "Constructs a default HBaseConfiguration object and sets the options given in
+   config-map.
 
-   Example: (set-config
+   Example: (make-config
               {\"hbase.zookeeper.dns.interface\" \"lo\"
               :hbase.zookeeper.quorum \"127.0.0.1\"})"
   [config-map]
   (let [config-obj (HBaseConfiguration/create)]
-    (doseq [[k v] (seq config-map)]
-      (.set config-obj (name k) (name v)))
-    (swap! *db* (fn [_]
-                  (HTablePool. config-obj Integer/MAX_VALUE)))))
-  
+    (doseq [[option value] (seq config-map)]
+      (.set config-obj (name option) (name value)))
+    config-obj))
+
+(defn set-config
+  "Resets the *db* atom, so that subsequent calls to htable-pool
+   use the new configuration (a HBaseConfiguration object).
+
+   Example: (set-config
+              (make-config
+                {\"hbase.zookeeper.dns.interface\" \"lo\"
+                :hbase.zookeeper.quorum \"127.0.0.1\"})"
+  [^HBaseConfiguration config-obj]
+  (reset! *db* (HTablePool. config-obj Integer/MAX_VALUE)))
+
 (defn- ^HTablePool htable-pool
   []
   (if-let [pool @*db*]
