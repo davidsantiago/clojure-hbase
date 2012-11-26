@@ -2,8 +2,7 @@
   (:refer-clojure :rename {get map-get})
   (:use clojure-hbase.internal)
   (:import [org.apache.hadoop.hbase HBaseConfiguration HConstants KeyValue]
-           [org.apache.hadoop.hbase.client HTable
-            HTablePool Get Put Delete Scan Result RowLock]
+           [org.apache.hadoop.hbase.client HTablePool Get Put Delete Scan Result RowLock HTableInterface]
            [org.apache.hadoop.hbase.util Bytes]))
 
 (def ^{:private true} put-class
@@ -181,7 +180,7 @@
 
 (defn scanner
   "Creates a Scanner on the given table using the given Scan."
-  [#^HTable table #^Scan scan]
+  [#^HTableInterface table #^Scan scan]
   (io!
    (.getScanner table scan)))
 
@@ -193,7 +192,7 @@
 
 (defn release-table
   "Puts an HTable back into the open HTablePool."
-  [#^HTable table]
+  [#^HTableInterface table]
   (io!
    (.putTable (htable-pool) table)))
 
@@ -234,13 +233,13 @@
 
 (defn row-lock
   "Returns a RowLock on the given row of the given table."
-  [#^HTable table row]
+  [#^HTableInterface table row]
   (io!
    (.lockRow table (to-bytes row))))
 
 (defn row-unlock
   "Unlocks the row locked by the given RowLock."
-  [#^HTable table row-lock]
+  [#^HTableInterface table row-lock]
   (io!
    (.unlockRow table row-lock)))
 
@@ -248,7 +247,7 @@
   "Performs the given query actions (Get/Scan) on the given HTable. The return
    value will be a sequence of equal length, with each slot containing the
    results of the query in the corresponding position."
-  [#^HTable table & ops]
+  [#^HTableInterface table & ops]
   (io!
    (map (fn [op]
           (condp instance? op
@@ -260,7 +259,7 @@
 
 (defn modify
   "Performs the given modifying actions (Put/Delete) on the given HTable."
-  [#^HTable table & ops]
+  [#^HTableInterface table & ops]
   (io!
    (map (fn [op]
           (condp instance? op
@@ -344,7 +343,7 @@
 (defn get
   "Creates and executes a Get object against the given table. Options are
    the same as for get."
-  [#^HTable table row & args]
+  [#^HTableInterface table row & args]
   (let [g #^Get (apply get* row args)]
     (io!
      (.get table g))))
@@ -406,7 +405,7 @@
 (defn put
   "Creates and executes a Put object against the given table. Options are
    the same as for put."
-  [#^HTable table row & args]
+  [#^HTableInterface table row & args]
   (let [p #^Put (apply put* row args)]
     (io!
      (.put table p))))
@@ -414,17 +413,17 @@
 (defn check-and-put
   "Atomically checks that the row-family-qualifier-value match the values we
    give, and if so, executes the Put."
-  ([#^HTable table row family qualifier value #^Put put]
+  ([#^HTableInterface table row family qualifier value #^Put put]
      (.checkAndPut table (to-bytes row) (to-bytes family) (to-bytes qualifier)
                    (to-bytes value) put))
-  ([#^HTable table [row family qualifier value] #^Put put]
+  ([#^HTableInterface table [row family qualifier value] #^Put put]
      (check-and-put table row family qualifier value put)))
 
 (defn insert
   "If the family and qualifier are non-existent, the Put will be committed.
    The row is taken from the Put object, but the family and qualifier cannot
    be determined from a Put object, so they must be specified."
-  [#^HTable table family qualifier ^Put put]
+  [#^HTableInterface table family qualifier ^Put put]
   (check-and-put table (.getRow put) family qualifier
                  (byte-array 0) put))
 
@@ -530,7 +529,7 @@
 (defn delete
   "Creates and executes a Delete object against the given table. Options are
    the same as for delete."
-  [#^HTable table row & args]
+  [#^HTableInterface table row & args]
   (let [d #^Delete (apply delete* row args)]
     (io!
      (.delete table d))))
@@ -596,7 +595,7 @@
   "Creates and runs a Scan object. All arguments are the same as scan.
    ResultScanner implements Iterable, so you should be able to just use it
    directly, but don't forget to .close it! Better yet, use with-scanner."
-  [#^HTable table & args]
+  [#^HTableInterface table & args]
   (let [s (apply scan* args)]
     (io!
      (scanner table s))))
