@@ -164,6 +164,8 @@ version I've tested against, but earlier ones may still work.
 
 ## Lately...
 
+- Update to version 0.92.1. Tested against 0.92 and 0.94 HBase. Updates type hints to the more general HTableInterface instead of the older HTable concrete type.
+
 - Update to version 0.92.0. Tested against 0.92 and 0.94 HBase. Includes a bug fix for the command to delete specific columns from [Dan Lidral-Porter](https://github.com/aperiodic) and a new, more flexible API for managing HBase's configuration programmatically from [Joel Kaasinen](https://github.com/opqdonut).
 
 - Update to version 0.90.5-4, which fixes numerous bugs and adds test cases. Includes fixes and tests from [Ryan Senior](https://github.com/senior).
