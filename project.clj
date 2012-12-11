@@ -18,8 +18,8 @@
                                       [org.apache.hbase/hbase "0.94.1" :classifier "tests" :scope "test"]
                                       [org.apache.hadoop/hadoop-test "1.1.0" :scope "test"]]}
              :cdh4 {:dependencies [[org.apache.hbase/hbase "0.92.1-cdh4.1.2"]
-                                   [org.apache.hadoop/hadoop-common "2.0.0-cdh4.1.2"]
-                                   [org.apache.hadoop/hadoop-hdfs "2.0.0-cdh4.1.2"]
+                                   [org.apache.hadoop/hadoop-common "2.0.0-cdh4.1.2" :scope "test"]
+                                   [org.apache.hadoop/hadoop-hdfs "2.0.0-cdh4.1.2" :scope "test"]
                                    [org.apache.hbase/hbase "0.92.1-cdh4.1.2" :classifier "tests" :scope "test"]
                                    [org.apache.hadoop/hadoop-common "2.0.0-cdh4.1.2" :classifier "tests" :scope "test"]
                                    [org.apache.hadoop/hadoop-hdfs "2.0.0-cdh4.1.2" :classifier "tests" :scope "test"]
