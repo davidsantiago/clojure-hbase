@@ -4,8 +4,13 @@
         clojure.stacktrace
         [clojure-hbase.core]
         [clojure-hbase.admin :exclude [flush]])
-  (:import [org.apache.hadoop.hbase.util Bytes]
+  (:import [org.apache.hadoop.hbase HBaseTestingUtility]
+           [org.apache.hadoop.hbase.util Bytes]
            [java.util UUID]))
+
+;; HBaseTestingUtility instance
+
+(def ^:dynamic *test-util* (atom nil))
 
 ;; Testing Utilities
 
@@ -306,16 +311,19 @@
                              :map-value     #(Bytes/toString %)))
            "latest-as-map works.")))))
 
-(deftest test-set-config
-  (try
-    (as-test
-     (is (thrown? Exception
-                  (do
-                    (set-config (make-config {"hbase.zookeeper.quorum"
-                                              "asdsa"})) ;; not valid
-                    (table test-tbl-name)))) ;; This should throw an exception.
-     (is (do
-           (set-config (make-config {"hbase.zookeeper.quorum" "127.0.0.1"}))
-           (table test-tbl-name))))
-    (finally
-     (set-config (make-config (default-config))))))
+(defn once-start []
+  (.startMiniCluster 
+   (reset! *test-util* (HBaseTestingUtility.)) 1)
+  (let [config (.getConfiguration @*test-util*)]
+    (set-config config)
+    (set-admin-config config)))
+
+(defn once-stop []
+  (.shutdownMiniCluster @*test-util*))
+
+(defn once-fixture [f]
+  (once-start)
+  (f)
+  (once-stop))
+
+(use-fixtures :once once-fixture)
