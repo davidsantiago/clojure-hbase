@@ -84,6 +84,10 @@
   [arg]
   (let [map-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String map-as-str)))
+(defmethod to-bytes-impl clojure.lang.PersistentHashSet
+  [arg]
+  (let [set-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String set-as-str)))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
