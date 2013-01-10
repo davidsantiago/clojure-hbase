@@ -419,6 +419,15 @@
   ([#^HTableInterface table [row family qualifier value] #^Put put]
      (check-and-put table row family qualifier value put)))
 
+(defn check-and-delete
+  "Atomically checks that the row-family-qualifier-value match the values we
+   give, and if so, executes the Delete"
+  ([#^HTableInterface table row family qualifier value #^Delete delete]
+     (.checkAndDelete table (hb/to-bytes row) (hb/to-bytes family) (hb/to-bytes qualifier)
+                      (hb/to-bytes value) delete))
+  ([#^HTableInterface table [row family qualifier value] #^Delete delete]
+     (check-and-delete table row family qualifier value delete)))
+
 (defn insert
   "If the family and qualifier are non-existent, the Put will be committed.
    The row is taken from the Put object, but the family and qualifier cannot
