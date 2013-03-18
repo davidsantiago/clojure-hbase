@@ -18,3 +18,7 @@
         (let [[a-cmd rest-cmds] (split-at (inc (map-get cmd-argnum-map kw 1))
                                           remaining-commands)]
           (recur (conj result a-cmd) rest-cmds))))))
+
+(defn contained?
+  "True iff `coll` `contains?` `key`."
+  [key coll] (contains? coll key))

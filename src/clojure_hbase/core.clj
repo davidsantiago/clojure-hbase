@@ -282,7 +282,7 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
                                                         (first %)) options)))]
-    (condp contains? cons-opts
+    (condp contained? cons-opts
       :use-existing (io! (:use-existing cons-opts))
       :row-lock     (new Get row (:row-lock cons-opts))
       (new Get row))))
@@ -452,7 +452,7 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
                                             options)))]
-    (condp contains? cons-opts
+    (condp contained? cons-opts
       :use-existing (io! (:use-existing cons-opts))
       :row-lock     (new Delete row HConstants/LATEST_TIMESTAMP
                          (:row-lock cons-opts))
@@ -560,7 +560,7 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
                                             options)))]
-    (condp contains? cons-opts
+    (condp contained? cons-opts
       :use-existing (io! (:use-existing cons-opts))
       (Scan.))))
 
