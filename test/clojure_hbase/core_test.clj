@@ -41,7 +41,6 @@
      (try
        (setup-tbl)
        ~@body
-       (catch Throwable t# (print-cause-trace t#))
        (finally
         (remove-tbl)))))
 
