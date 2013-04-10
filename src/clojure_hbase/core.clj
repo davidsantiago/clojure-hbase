@@ -282,10 +282,10 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
                                                         (first %)) options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Get row (:row-lock cons-opts))
-      (new Get row))))
+    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
+          (contains? cons-opts :row-lock) (new Get row (:row-lock cons-opts))
+          :else
+          (new Get row))))
 
 ;; This maps each get command to its number of arguments, for helping us
 ;; partition the command sequence.
@@ -370,10 +370,11 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
                                                         (first %)) options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Put row ^RowLock (:row-lock cons-opts))
-      (new Put row))))
+    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
+          (contains? cons-opts :row-lock) (new Put row ^RowLock
+                                               (:row-lock cons-opts))
+          :else
+          (new Put row))))
 
 (defn- put-add
   [#^Put put-op family qualifier value]
@@ -452,11 +453,12 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
                                             options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Delete row HConstants/LATEST_TIMESTAMP
-                         (:row-lock cons-opts))
-      (new Delete row))))
+    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
+          (contains? cons-opts :row-lock) (new Delete row
+                                               HConstants/LATEST_TIMESTAMP
+                                               (:row-lock cons-opts))
+          :else
+          (new Delete row))))
 
 (defn- delete-column
   [#^Delete delete-op family qualifier]
@@ -560,9 +562,9 @@
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
                                             options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      (Scan.))))
+    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
+          :else
+          (Scan.))))
 
 (defn scan*
   "Returns a Scan object suitable for performing a scan on an HTable. To make
