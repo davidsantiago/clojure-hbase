@@ -44,6 +44,16 @@
        (finally
         (remove-tbl)))))
 
+(def to-bytes-test-values [[1 2 3] '(1 2 3) {"1" 1} #{1 2 3}])
+(deftest to-bytes-test
+  (is (= :test
+         (binding [*read-eval* false]
+           (keyword (Bytes/toString (to-bytes :test))))))
+  (doseq [val to-bytes-test-values]
+    (is (= val
+           (binding [*read-eval* false]
+             (read-string (Bytes/toString (to-bytes val))))))))
+
 (deftest create-delete-table
   (as-test
    (is (.contains (map #(Bytes/toString (.getName %)) (list-tables))

@@ -61,7 +61,13 @@
 (defmulti to-bytes-impl
   "Converts its argument into an array of bytes. By default, uses HBase's
    Bytes/toBytes and does nothing to byte arrays. Since it is a multimethod
-   you can redefine it to create your own serialization routines for new types."
+   you can redefine it to create your own serialization routines for new types.
+
+   This multimethod is mainly for internal use, but it's here if you want it.
+   For anything but strings and other basic types, you should probably be
+   handling the serialization and deserialization yourself. In particular,
+   this multimethod does not serialize everything so that clojure's `read`
+   function will read them back."
   class)
 (defmethod to-bytes-impl (Class/forName "[B")
   [arg]
@@ -74,16 +80,25 @@
   (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.IPersistentList
   [arg]
+  ;; *print-dup* false prevents metadata from being printed, and
+  ;; thus requiring an EvalReader.
   (let [list-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String list-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentVector
   [arg]
+  ;; *print-dup* false prevents metadata from being printed
   (let [vec-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String vec-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentMap
   [arg]
+  ;; *print-dup* false prevents metadata from being printed
   (let [map-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String map-as-str)))
+(defmethod to-bytes-impl clojure.lang.IPersistentSet
+  [arg]
+  ;; *print-dup* false prevents metadata from being printed
+  (let [set-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String set-as-str)))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
