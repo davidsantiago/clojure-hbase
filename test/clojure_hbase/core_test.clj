@@ -90,7 +90,8 @@
            "Successfully ran 'execute' of a Get object.")
        (execute test-tbl (delete* row :column [cf-name :testqual]))
        (is (= '()
-              (as-vector (get test-tbl row :column [cf-name :testqual]))))))))
+              (as-vector (get test-tbl row :column [cf-name :testqual])))
+           "Successfully ran 'execute' of a Delete object.")))))
 
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
@@ -126,6 +127,55 @@
        (is (= '() (as-vector (get test-tbl row :column
                                   [cf-name :testqual])))
            "Successfully executed Delete of the Put.")))))
+
+(deftest construction-options-test
+ (let [cf-name "test-cf-name"
+        row     "testrow"
+        rowvalue   [[:test-cf-name :testqual nil :testval]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+        (let [existing-put (put* row)
+             put-obj (put* row
+                           :value [cf-name :testqual :testval]
+                           :use-existing existing-put)]
+         (execute test-tbl put-obj)
+         (is (and (= put-obj existing-put)
+                  (= rowvalue
+                     (test-vector
+                      (get test-tbl row :column [cf-name :testqual]))))
+             "Successfully executed Put :value using an existing Put."))
+       (let [existing-get (get* row)
+             get-obj (get* row
+                           :column [cf-name :testqual]
+                           :use-existing existing-get)
+             existing-scan (scan*)
+             scan-obj (scan* :column [cf-name :testqual]
+                             :use-existing existing-scan)]
+         (is (and (= get-obj existing-get)
+                  (= scan-obj existing-scan)
+                  (= rowvalue
+                     (-> (execute test-tbl scan-obj)
+                         first ;; of the vector of execute returns
+                         .iterator
+                         iterator-seq
+                         first ;; of the ResultScanner
+                         test-vector))
+                  (= rowvalue
+                     (test-vector (first (execute test-tbl get-obj)))))
+             "Successfully executed Get :column using an existing Get,
+              and Scan :column using an existing Scan."))
+       (let [existing-delete (delete* row)
+             delete-obj (delete* row
+                                 :column [cf-name :testqual]
+                                 :use-existing existing-delete)]
+         (execute test-tbl delete-obj)
+         (is (and (= delete-obj existing-delete)
+                  (= '() (as-vector (get test-tbl row :column
+                                         [cf-name :testqual]))))
+             "Successfully executed Delete :column using an existing Delete."))))))
 
 (deftest multicol-get-put-delete
   (let [row "testrow"

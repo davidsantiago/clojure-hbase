@@ -302,18 +302,24 @@
 ;;
 
 (defn- make-get
-  "Makes a Get object, taking into account user directives, such as using
-   an existing Get, or passing a pre-existing RowLock."
+  "Makes a Get object, taking into account user construction
+   directives, such as using an existing Get, or passing a
+   pre-existing RowLock. Returns a two-element vector; the first
+   element contains the new Get object, the second contains the
+   specs with any construction directives removed."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
-                                                        (first %)) options)))]
-    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
-          (contains? cons-opts :row-lock) (new Get row (:row-lock cons-opts))
-          :else
-          (new Get row))))
+                                                        (first %)) options)))
+        get-obj (cond (contains? cons-opts :use-existing)
+                      (io! (:use-existing cons-opts))
+                      (contains? cons-opts :row-lock)
+                      (new Get row (:row-lock cons-opts))
+                      :else
+                      (new Get row))]
+    [get-obj (filter #(not (contains? directives (first %))) options)]))
 
 ;; This maps each get command to its number of arguments, for helping us
 ;; partition the command sequence.
@@ -349,7 +355,7 @@
    :row-lock."
   [row & args]
   (let [specs (partition-query args get-argnums)
-        #^Get get-op (make-get row specs)]
+        [#^Get get-op specs] (make-get row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :column       (apply #(.addColumn get-op
@@ -367,6 +373,7 @@
           :time-range   (apply #(.setTimeRange get-op %1 %2) (second spec))
           :time-stamp   (.setTimeStamp get-op (second spec))))
     get-op))
+
 
 (defn get
   "Creates and executes a Get object against the given table. Options are
@@ -390,19 +397,23 @@
    :use-existing 1})  ;; :use-existing <a Put you've made>
 
 (defn- make-put
-  "Makes a Put object, taking into account user directives, such as using
-   an existing Put, or passing a pre-existing RowLock."
+  "Makes a Put object, taking into account user construction directives, such as
+   using an existing Put, or passing a pre-existing RowLock. Returns a two-item
+   vector, with the Put object returned in the first element, and the remaining,
+   non-construction options in the second."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
-                                                        (first %)) options)))]
-    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
-          (contains? cons-opts :row-lock) (new Put row ^RowLock
-                                               (:row-lock cons-opts))
-          :else
-          (new Put row))))
+                                                        (first %)) options)))
+        put-obj (cond (contains? cons-opts :use-existing)
+                      (io! (:use-existing cons-opts))
+                      (contains? cons-opts :row-lock)
+                      (new Put row ^RowLock (:row-lock cons-opts))
+                      :else
+                      (new Put row))]
+    [put-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- put-add
   [#^Put put-op family qualifier value]
@@ -423,7 +434,7 @@
    :row-lock."
   [row & args]
   (let [specs  (partition-query args put-argnums)
-        #^Put put-op (make-put row specs)]
+        [#^Put put-op specs] (make-put row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :value          (apply put-add put-op (second spec))
@@ -473,20 +484,24 @@
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
 (defn- make-delete
-  "Makes a Delete object, taking into account user directives, such as using
-   an existing Delete, or passing a pre-existing RowLock."
+  "Makes a Delete object, taking into account user construction directives,
+   such as using an existing Delete, or passing a pre-existing RowLock.
+   Returns a two-item vector, with the Delete object returned in the first
+   element, and the remaining, non-construction options in the second."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
-                                            options)))]
-    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
-          (contains? cons-opts :row-lock) (new Delete row
-                                               HConstants/LATEST_TIMESTAMP
-                                               (:row-lock cons-opts))
-          :else
-          (new Delete row))))
+                                            options)))
+        delete-obj (cond (contains? cons-opts :use-existing)
+                         (io! (:use-existing cons-opts))
+                         (contains? cons-opts :row-lock)
+                         (new Delete row
+                              HConstants/LATEST_TIMESTAMP
+                              (:row-lock cons-opts))
+                         :else (new Delete row))]
+    [delete-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- delete-column
   [#^Delete delete-op family qualifier]
@@ -542,7 +557,7 @@
    :row-lock."
   [row & args]
   (let [specs     (partition-query args delete-argnums)
-        delete-op (make-delete row specs)]
+        [^Delete delete-op specs] (make-delete row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
@@ -589,10 +604,12 @@
   (let [directives #{:use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
-                                            options)))]
-    (cond (contains? cons-opts :use-existing) (io! (:use-existing cons-opts))
-          :else
-          (Scan.))))
+                                            options)))
+        scan-obj (cond (contains? cons-opts :use-existing)
+                       (io! (:use-existing cons-opts))
+                       :else
+                       (Scan.))]
+    [scan-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn scan*
   "Returns a Scan object suitable for performing a scan on an HTable. To make
@@ -600,7 +617,7 @@
    :use-existing."
   [& args]
   (let [specs   (partition-query args scan-argnums)
-        scan-op #^Scan (make-scan specs)]
+        [^Scan scan-op specs] (make-scan specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :column       (apply #(.addColumn scan-op
