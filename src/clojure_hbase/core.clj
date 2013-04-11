@@ -63,11 +63,13 @@
    Bytes/toBytes and does nothing to byte arrays. Since it is a multimethod
    you can redefine it to create your own serialization routines for new types.
 
-   This multimethod is mainly for internal use, but it's here if you want it.
-   For anything but strings and other basic types, you should probably be
-   handling the serialization and deserialization yourself. In particular,
-   this multimethod does not serialize everything so that clojure's `read`
-   function will read them back."
+   This multimethod is mainly for internal use, and may be made private in
+   a future release. You should probably be handling the serialization and
+   deserialization yourself at the user level. That is, prefer giving the
+   API functions byte arrays or Strings that you have written to and will
+   read from. Note: This multimethod does not serialize everything so that
+   clojure's `read` function will read them back."
+  {:deprecated "0.92.2"}
   class)
 (defmethod to-bytes-impl (Class/forName "[B")
   [arg]
@@ -106,8 +108,15 @@
 (defn to-bytes
   "Converts its argument to an array of bytes using the to-bytes-impl
    multimethod. We can't type hint a multimethod, so we type hint this
-   shell function and calls all over this module don't need reflection."
-  {:tag (Class/forName "[B")}
+   shell function and calls all over this module don't need reflection.
+
+   Deprecated: This method is now intended mainly for internal use and
+   may be made private in a future release. You should be handling the
+   serialization and deserialization yourself at the user level. That is, prefer
+   giving the API functions byte arrays or Strings that you have written
+   to and will read from."
+  {:tag (Class/forName "[B")
+   :deprecated "0.92.2"}
   [arg]
   (to-bytes-impl arg))
 
