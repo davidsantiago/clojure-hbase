@@ -243,31 +243,59 @@
   (io!
    (.unlockRow table row-lock)))
 
+(defprotocol HBaseOperation
+  "This protocol defines an `execute` operation that can be defined on
+   an object that represents some request against a table. Implement it
+   for objects that you wish to use with the `execute` function and which
+   can be expressed in this way."
+  (execute-operation [operation table]
+    "Run the given operation object on the HTable given."))
+
+(extend-protocol HBaseOperation
+  Get
+  (execute-operation [operation table] (.get ^HTableInterface table
+                                             ^Get operation))
+  Put
+  (execute-operation [operation table] (.put ^HTableInterface table
+                                             ^Put operation))
+  Scan
+  (execute-operation [operation table] (scanner table operation))
+  Delete
+  (execute-operation [operation table] (.delete ^HTableInterface table
+                                                ^Delete operation)))
+
+(defn execute
+  "Performs the given HBase table operations (anything implementing the
+   HBaseOperation protocol, such as Get/Scan/Put/Delete) on the given
+   HTableInterface. The return value will be a sequence of equal length,
+   with each slot containing the results of the query in the corresponding
+   position."
+  [^HTableInterface table & ops]
+  (io! (loop [results (transient [])
+              remaining-ops ops]
+         (if (empty? remaining-ops)
+           (persistent! results)
+           (recur (conj! results (execute-operation (first remaining-ops)
+                                                    table))
+                  (rest remaining-ops))))))
+
 (defn query
   "Performs the given query actions (Get/Scan) on the given HTable. The return
    value will be a sequence of equal length, with each slot containing the
-   results of the query in the corresponding position."
-  [#^HTableInterface table & ops]
-  (io!
-   (map (fn [op]
-          (condp instance? op
-            get-class   (.get table #^Get op)
-            scan-class  (scanner table op)
-            (throw (IllegalArgumentException.
-                    "Arguments must be Get or Scan objects."))))
-        ops)))
+   results of the query in the corresponding position.
+
+   DEPRECATED: Use 'execute' instead."
+  {:deprecated "0.92.2"}
+  [table & ops]
+  (apply execute table ops))
 
 (defn modify
-  "Performs the given modifying actions (Put/Delete) on the given HTable."
-  [#^HTableInterface table & ops]
-  (io!
-   (map (fn [op]
-          (condp instance? op
-            put-class     (.put table #^Put op)
-            delete-class  (.delete table #^Delete op)
-            (throw (IllegalArgumentException.
-                    "Arguments must be Put or Delete objects."))))
-        ops)))
+  "Performs the given modifying actions (Put/Delete) on the given HTable.
+
+   DEPRECATED: Use 'execute' instead."
+  {:deprecated "0.92.2"}
+  [table & ops]
+  (apply execute table ops))
 
 ;;
 ;;  GET

@@ -69,6 +69,29 @@
          "Deleted the column family successfully.")
      (enable-table test-tbl-name))))
 
+(deftest execute-test
+  (let [cf-name "test-cf-name"
+        row "testrow"
+        rowvalue [[:test-cf-name :testqual nil :testval]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (execute test-tbl (put* row :value [cf-name :testqual :testval]))
+       (is (= rowvalue
+              (test-vector
+               (get test-tbl row :column [cf-name :testqual])))
+           "Successfully ran 'execute' of a Put object.")
+       (is (= rowvalue
+              (-> (execute test-tbl (get* row :column [cf-name :testqual]))
+                  first
+                  test-vector))
+           "Successfully ran 'execute' of a Get object.")
+       (execute test-tbl (delete* row :column [cf-name :testqual]))
+       (is (= '()
+              (as-vector (get test-tbl row :column [cf-name :testqual]))))))))
+
 (deftest get-put-delete
   (let [cf-name "test-cf-name"
         row     "testrow"
