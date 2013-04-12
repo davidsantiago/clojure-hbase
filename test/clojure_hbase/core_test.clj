@@ -223,6 +223,34 @@
                                  :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
 
+(deftest atomic-ops-test
+  (let [cf-name "test-cf-name"]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (check-and-put test-tbl ["testrow" cf-name :testcol1 nil]
+                      (put* "testrow" :value [cf-name :testcol1 :hi]))
+       (is (= [[:test-cf-name :testcol1 nil :hi]]
+              (test-vector (get test-tbl "testrow")))
+           "Successfully executed an atomic put of a non-existent value.")
+       (check-and-put test-tbl ["testrow" cf-name :testcol1 "hi"]
+                      (put* "testrow" :value [cf-name :testcol2 :there]))
+       (is (= [[:test-cf-name :testcol1 nil :hi]
+               [:test-cf-name :testcol2 nil :there]]
+              (test-vector (get test-tbl "testrow")))
+           "Successfully executed an atomic put against an existing value.")
+       (check-and-delete test-tbl ["testrow" cf-name :testcol1 :hi]
+                         (delete* "testrow" :column [cf-name :testcol2]))
+       (is (= [[:test-cf-name :testcol1 nil :hi]]
+              (test-vector (get test-tbl "testrow")))
+           "Successfully executed an atomic delete against an existing value.")
+       (check-and-delete test-tbl ["testrow" cf-name :testcol2 nil]
+                         (delete* "testrow" :column [cf-name :testcol1]))
+       (is (= [] (test-vector (get test-tbl "testrow")))
+           "Successfully executed an atomic delete against a non-existent value.")))))
+
 (def scan-row-values (sort-by #(first %)
                               (for [k (range 10000)]
                                 [(str (UUID/randomUUID))

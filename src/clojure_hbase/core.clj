@@ -476,19 +476,24 @@
 
 (defn check-and-put
   "Atomically checks that the row-family-qualifier-value match the values we
-   give, and if so, executes the Put."
+   give, and if so, executes the Put. A nil value checks for the non-existence
+   of the column."
   ([#^HTableInterface table row family qualifier value #^Put put]
      (.checkAndPut table (to-bytes row) (to-bytes family) (to-bytes qualifier)
-                   (to-bytes value) put))
+                   (if (nil? value) nil (to-bytes value))
+                   put))
   ([#^HTableInterface table [row family qualifier value] #^Put put]
      (check-and-put table row family qualifier value put)))
 
 (defn check-and-delete
   "Atomically checks that the row-family-qualifier-value match the values we
-   give, and if so, executes the Delete"
+   give, and if so, executes the Delete. A nil value checks for the
+   non-existence of the column."
   ([#^HTableInterface table row family qualifier value #^Delete delete]
-     (.checkAndDelete table (hb/to-bytes row) (hb/to-bytes family) (hb/to-bytes qualifier)
-                      (hb/to-bytes value) delete))
+     (.checkAndDelete table (to-bytes row) (to-bytes family)
+                      (to-bytes qualifier)
+                      (if (nil? value) nil (to-bytes value))
+                      delete))
   ([#^HTableInterface table [row family qualifier value] #^Delete delete]
      (check-and-delete table row family qualifier value delete)))
 
