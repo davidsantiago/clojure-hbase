@@ -61,7 +61,15 @@
 (defmulti to-bytes-impl
   "Converts its argument into an array of bytes. By default, uses HBase's
    Bytes/toBytes and does nothing to byte arrays. Since it is a multimethod
-   you can redefine it to create your own serialization routines for new types."
+   you can redefine it to create your own serialization routines for new types.
+
+   This multimethod is mainly for internal use, and may be made private in
+   a future release. You should probably be handling the serialization and
+   deserialization yourself at the user level. That is, prefer giving the
+   API functions byte arrays or Strings that you have written to and will
+   read from. Note: This multimethod does not serialize everything so that
+   clojure's `read` function will read them back."
+  {:deprecated "0.92.2"}
   class)
 (defmethod to-bytes-impl (Class/forName "[B")
   [arg]
@@ -74,16 +82,25 @@
   (Bytes/toBytes ^String (name arg)))
 (defmethod to-bytes-impl clojure.lang.IPersistentList
   [arg]
+  ;; *print-dup* false prevents metadata from being printed, and
+  ;; thus requiring an EvalReader.
   (let [list-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String list-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentVector
   [arg]
+  ;; *print-dup* false prevents metadata from being printed
   (let [vec-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String vec-as-str)))
 (defmethod to-bytes-impl clojure.lang.IPersistentMap
   [arg]
+  ;; *print-dup* false prevents metadata from being printed
   (let [map-as-str (binding [*print-dup* false] (pr-str arg))]
     (Bytes/toBytes ^String map-as-str)))
+(defmethod to-bytes-impl clojure.lang.IPersistentSet
+  [arg]
+  ;; *print-dup* false prevents metadata from being printed
+  (let [set-as-str (binding [*print-dup* false] (pr-str arg))]
+    (Bytes/toBytes ^String set-as-str)))
 (defmethod to-bytes-impl :default
   [arg]
   (Bytes/toBytes arg))
@@ -91,8 +108,15 @@
 (defn to-bytes
   "Converts its argument to an array of bytes using the to-bytes-impl
    multimethod. We can't type hint a multimethod, so we type hint this
-   shell function and calls all over this module don't need reflection."
-  {:tag (Class/forName "[B")}
+   shell function and calls all over this module don't need reflection.
+
+   Deprecated: This method is now intended mainly for internal use and
+   may be made private in a future release. You should be handling the
+   serialization and deserialization yourself at the user level. That is, prefer
+   giving the API functions byte arrays or Strings that you have written
+   to and will read from."
+  {:tag (Class/forName "[B")
+   :deprecated "0.92.2"}
   [arg]
   (to-bytes-impl arg))
 
@@ -243,49 +267,83 @@
   (io!
    (.unlockRow table row-lock)))
 
+(defprotocol HBaseOperation
+  "This protocol defines an `execute` operation that can be defined on
+   an object that represents some request against a table. Implement it
+   for objects that you wish to use with the `execute` function and which
+   can be expressed in this way."
+  (execute-operation [operation table]
+    "Run the given operation object on the HTable given."))
+
+(extend-protocol HBaseOperation
+  Get
+  (execute-operation [operation table] (.get ^HTableInterface table
+                                             ^Get operation))
+  Put
+  (execute-operation [operation table] (.put ^HTableInterface table
+                                             ^Put operation))
+  Scan
+  (execute-operation [operation table] (scanner table operation))
+  Delete
+  (execute-operation [operation table] (.delete ^HTableInterface table
+                                                ^Delete operation)))
+
+(defn execute
+  "Performs the given HBase table operations (anything implementing the
+   HBaseOperation protocol, such as Get/Scan/Put/Delete) on the given
+   HTableInterface. The return value will be a sequence of equal length,
+   with each slot containing the results of the query in the corresponding
+   position."
+  [^HTableInterface table & ops]
+  (io! (loop [results (transient [])
+              remaining-ops ops]
+         (if (empty? remaining-ops)
+           (persistent! results)
+           (recur (conj! results (execute-operation (first remaining-ops)
+                                                    table))
+                  (rest remaining-ops))))))
+
 (defn query
   "Performs the given query actions (Get/Scan) on the given HTable. The return
    value will be a sequence of equal length, with each slot containing the
-   results of the query in the corresponding position."
-  [#^HTableInterface table & ops]
-  (io!
-   (map (fn [op]
-          (condp instance? op
-            get-class   (.get table #^Get op)
-            scan-class  (scanner table op)
-            (throw (IllegalArgumentException.
-                    "Arguments must be Get or Scan objects."))))
-        ops)))
+   results of the query in the corresponding position.
+
+   DEPRECATED: Use 'execute' instead."
+  {:deprecated "0.92.2"}
+  [table & ops]
+  (apply execute table ops))
 
 (defn modify
-  "Performs the given modifying actions (Put/Delete) on the given HTable."
-  [#^HTableInterface table & ops]
-  (io!
-   (map (fn [op]
-          (condp instance? op
-            put-class     (.put table #^Put op)
-            delete-class  (.delete table #^Delete op)
-            (throw (IllegalArgumentException.
-                    "Arguments must be Put or Delete objects."))))
-        ops)))
+  "Performs the given modifying actions (Put/Delete) on the given HTable.
+
+   DEPRECATED: Use 'execute' instead."
+  {:deprecated "0.92.2"}
+  [table & ops]
+  (apply execute table ops))
 
 ;;
 ;;  GET
 ;;
 
 (defn- make-get
-  "Makes a Get object, taking into account user directives, such as using
-   an existing Get, or passing a pre-existing RowLock."
+  "Makes a Get object, taking into account user construction
+   directives, such as using an existing Get, or passing a
+   pre-existing RowLock. Returns a two-element vector; the first
+   element contains the new Get object, the second contains the
+   specs with any construction directives removed."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
-                                                        (first %)) options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Get row (:row-lock cons-opts))
-      (new Get row))))
+                                                        (first %)) options)))
+        get-obj (cond (contains? cons-opts :use-existing)
+                      (io! (:use-existing cons-opts))
+                      (contains? cons-opts :row-lock)
+                      (new Get row (:row-lock cons-opts))
+                      :else
+                      (new Get row))]
+    [get-obj (filter #(not (contains? directives (first %))) options)]))
 
 ;; This maps each get command to its number of arguments, for helping us
 ;; partition the command sequence.
@@ -321,7 +379,7 @@
    :row-lock."
   [row & args]
   (let [specs (partition-query args get-argnums)
-        #^Get get-op (make-get row specs)]
+        [#^Get get-op specs] (make-get row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :column       (apply #(.addColumn get-op
@@ -339,6 +397,7 @@
           :time-range   (apply #(.setTimeRange get-op %1 %2) (second spec))
           :time-stamp   (.setTimeStamp get-op (second spec))))
     get-op))
+
 
 (defn get
   "Creates and executes a Get object against the given table. Options are
@@ -362,18 +421,23 @@
    :use-existing 1})  ;; :use-existing <a Put you've made>
 
 (defn- make-put
-  "Makes a Put object, taking into account user directives, such as using
-   an existing Put, or passing a pre-existing RowLock."
+  "Makes a Put object, taking into account user construction directives, such as
+   using an existing Put, or passing a pre-existing RowLock. Returns a two-item
+   vector, with the Put object returned in the first element, and the remaining,
+   non-construction options in the second."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives
-                                                        (first %)) options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Put row ^RowLock (:row-lock cons-opts))
-      (new Put row))))
+                                                        (first %)) options)))
+        put-obj (cond (contains? cons-opts :use-existing)
+                      (io! (:use-existing cons-opts))
+                      (contains? cons-opts :row-lock)
+                      (new Put row ^RowLock (:row-lock cons-opts))
+                      :else
+                      (new Put row))]
+    [put-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- put-add
   [#^Put put-op family qualifier value]
@@ -394,7 +458,7 @@
    :row-lock."
   [row & args]
   (let [specs  (partition-query args put-argnums)
-        #^Put put-op (make-put row specs)]
+        [#^Put put-op specs] (make-put row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :value          (apply put-add put-op (second spec))
@@ -412,12 +476,26 @@
 
 (defn check-and-put
   "Atomically checks that the row-family-qualifier-value match the values we
-   give, and if so, executes the Put."
+   give, and if so, executes the Put. A nil value checks for the non-existence
+   of the column."
   ([#^HTableInterface table row family qualifier value #^Put put]
      (.checkAndPut table (to-bytes row) (to-bytes family) (to-bytes qualifier)
-                   (to-bytes value) put))
+                   (if (nil? value) nil (to-bytes value))
+                   put))
   ([#^HTableInterface table [row family qualifier value] #^Put put]
      (check-and-put table row family qualifier value put)))
+
+(defn check-and-delete
+  "Atomically checks that the row-family-qualifier-value match the values we
+   give, and if so, executes the Delete. A nil value checks for the
+   non-existence of the column."
+  ([#^HTableInterface table row family qualifier value #^Delete delete]
+     (.checkAndDelete table (to-bytes row) (to-bytes family)
+                      (to-bytes qualifier)
+                      (if (nil? value) nil (to-bytes value))
+                      delete))
+  ([#^HTableInterface table [row family qualifier value] #^Delete delete]
+     (check-and-delete table row family qualifier value delete)))
 
 (defn insert
   "If the family and qualifier are non-existent, the Put will be committed.
@@ -444,19 +522,24 @@
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
 (defn- make-delete
-  "Makes a Delete object, taking into account user directives, such as using
-   an existing Delete, or passing a pre-existing RowLock."
+  "Makes a Delete object, taking into account user construction directives,
+   such as using an existing Delete, or passing a pre-existing RowLock.
+   Returns a two-item vector, with the Delete object returned in the first
+   element, and the remaining, non-construction options in the second."
   [row options]
   (let [row (to-bytes row)
         directives #{:row-lock :use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
-                                            options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      :row-lock     (new Delete row HConstants/LATEST_TIMESTAMP
-                         (:row-lock cons-opts))
-      (new Delete row))))
+                                            options)))
+        delete-obj (cond (contains? cons-opts :use-existing)
+                         (io! (:use-existing cons-opts))
+                         (contains? cons-opts :row-lock)
+                         (new Delete row
+                              HConstants/LATEST_TIMESTAMP
+                              (:row-lock cons-opts))
+                         :else (new Delete row))]
+    [delete-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- delete-column
   [#^Delete delete-op family qualifier]
@@ -512,7 +595,7 @@
    :row-lock."
   [row & args]
   (let [specs     (partition-query args delete-argnums)
-        delete-op (make-delete row specs)]
+        [^Delete delete-op specs] (make-delete row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
@@ -559,10 +642,12 @@
   (let [directives #{:use-existing}
         cons-opts (apply hash-map (flatten (filter
                                             #(contains? directives (first %))
-                                            options)))]
-    (condp contains? cons-opts
-      :use-existing (io! (:use-existing cons-opts))
-      (Scan.))))
+                                            options)))
+        scan-obj (cond (contains? cons-opts :use-existing)
+                       (io! (:use-existing cons-opts))
+                       :else
+                       (Scan.))]
+    [scan-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn scan*
   "Returns a Scan object suitable for performing a scan on an HTable. To make
@@ -570,7 +655,7 @@
    :use-existing."
   [& args]
   (let [specs   (partition-query args scan-argnums)
-        scan-op #^Scan (make-scan specs)]
+        [^Scan scan-op specs] (make-scan specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :column       (apply #(.addColumn scan-op

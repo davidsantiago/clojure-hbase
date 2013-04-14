@@ -164,6 +164,8 @@ version I've tested against, but earlier ones may still work.
 
 ## Lately...
 
+- Update to version 0.92.2. Tested against 0.92 and 0.94 HBase. Updates library to work properly with Clojure 1.5. Add check-and-delete operation, patch by [Kris Jenkins](https://github.com/krisajenkins). to-bytes is deprecated as a public function. Deprecate `modify` and `query` in favor of `execute`, which they are both now implemented in terms of. Other bug fixes and unit tests added.
+
 - Update to version 0.92.1. Tested against 0.92 and 0.94 HBase. Updates type hints to the more general HTableInterface instead of the older HTable concrete type. Patch by [Ryan Senior](https://github.com/senior).
 
 - Update to version 0.92.0. Tested against 0.92 and 0.94 HBase. Includes a bug fix for the command to delete specific columns from [Dan Lidral-Porter](https://github.com/aperiodic) and a new, more flexible API for managing HBase's configuration programmatically from [Joel Kaasinen](https://github.com/opqdonut).
@@ -195,6 +197,10 @@ version I've tested against, but earlier ones may still work.
 
 Added basic unit tests.
 Added a first cut at most of the Admin functions.
+
+## Development
+
+I love receiving pull requests and working with people on patches. Please keep in mind, though, that writing functions to wrap HBase's API is usually pretty easy. Most of the work these days is in testing and verification. It really helps me out and speeds things along if you can include unit tests, or at least snippets of repl code you used to verify functionality, that can be turned into unit tests.
 
 ## License
 
