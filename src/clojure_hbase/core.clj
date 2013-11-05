@@ -513,6 +513,7 @@
 ;; partition the command sequence.
 (def ^{:private true} delete-argnums
   {:column                1    ;; :column [:family-name :qualifier]
+   :all-versions          1    ;; :all-versions [:family-name :qualifier]
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
@@ -544,6 +545,10 @@
 (defn- delete-column
   [#^Delete delete-op family qualifier]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier)))
+
+(defn- delete-columns
+  [#^Delete delete-op family qualifier]
+  (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier)))
 
 (defn- delete-column-with-timestamp
   [#^Delete delete-op family qualifier timestamp]
@@ -601,6 +606,8 @@
           :with-timestamp        (handle-delete-ts delete-op spec)
           :with-timestamp-before (handle-delete-ts delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
+                                        (second spec))
+          :all-versions          (apply #(delete-columns delete-op %1 %2)
                                         (second spec))
           :columns               (apply-columns #(delete-column delete-op %1 %2)
                                                 (second spec))
