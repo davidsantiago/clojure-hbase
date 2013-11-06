@@ -516,8 +516,9 @@
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
-   :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
-   :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
+   :with-timestamp        2    ;; :with-timestamp <long> [[:column [...]]]
+   :with-timestamp-before 2    ;; :with-timestamp-before <long> [[:column ...]]
+   :all-versions          1    ;; :all-versions [:column :cf :cq :columns :cf [...]]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
@@ -544,6 +545,10 @@
 (defn- delete-column
   [#^Delete delete-op family qualifier]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier)))
+
+(defn- delete-columns
+  [#^Delete delete-op family qualifier]
+  (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier)))
 
 (defn- delete-column-with-timestamp
   [#^Delete delete-op family qualifier timestamp]
@@ -588,6 +593,17 @@
         :families (doseq [f (rest spec)]
                     (delete-family-timestamp delete-op f timestamp))))))
 
+(defn- delete-all-versions
+  [#^Delete delete-op specs]
+  (doseq [spec (partition 3 specs)]
+    (condp = (first spec)
+      :column
+      (apply #(delete-columns delete-op %1 %2) (rest spec))
+      :columns (let [[family quals] (rest spec)]
+                 (doseq [q quals]
+                   (delete-columns
+                     delete-op family q))))))
+
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
    make modifications to an existing Delete object, pass it as the argument to
@@ -600,6 +616,7 @@
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
           :with-timestamp-before (handle-delete-ts delete-op spec)
+          :all-versions          (delete-all-versions delete-op (second spec))
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
           :columns               (apply-columns #(delete-column delete-op %1 %2)

@@ -202,6 +202,15 @@ Added a first cut at most of the Admin functions.
 
 I love receiving pull requests and working with people on patches. Please keep in mind, though, that writing functions to wrap HBase's API is usually pretty easy. Most of the work these days is in testing and verification. It really helps me out and speeds things along if you can include unit tests, or at least snippets of repl code you used to verify functionality, that can be turned into unit tests.
 
+### Testing
+
+1. Stop local installation of Hadoop and HBase (if any)
+2. Modify `127.0.1.1 YOUR-HOST` to `127.0.0.1 YOUR-HOST` in /etc/hosts (if any)
+3. umask 022
+4. lein test
+
+If you use HBase 0.95.2 and see errors saying "Region is not online", ignore it.  It should be [HBASE-9303](https://issues.apache.org/jira/browse/HBASE-9303).
+
 ## License
 
 Eclipse Public License
