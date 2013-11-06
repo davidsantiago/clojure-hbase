@@ -225,48 +225,47 @@
 
 (deftest all-versions-delete
   (let [row "testrow"
-        rowvalue [[:test-cf-name1 :test1qual1 nil :testval1t3]
-                  [:test-cf-name1 :test1qual2 nil :testval2t1]
-                  [:test-cf-name2 :test2qual1 nil :testval3t2]
-                  [:test-cf-name2 :test2qual2 nil :testval4t3]]
-        deletev1 [[:test-cf-name1 :test1qual2 nil :testval2t1]]
-        deletev2 [[:test-cf-name2 :test2qual3 nil :testval5t1]]
-        deletev3 [[:test-cf-name1 :test1qual1 nil :testval1t4]]]
+        rowvalue [[:cf1 :a nil :v1t3]
+                  [:cf1 :b nil :v2t1]
+                  [:cf2 :c nil :v3t2]
+                  [:cf2 :d nil :v4t3]
+                  [:cf2 :e nil :v5t1]]
+        deletev1 [[:cf1 :b nil :v2t1]]
+        deletev2 [[:cf2 :e nil :v5t1]]
+        deletev3 [[:cf1 :a nil :final]
+                  [:cf1 :b nil :v2t1]]]
     (as-test
      (disable-table test-tbl-name)
-     (add-column-family test-tbl-name (column-descriptor "test-cf-name1"))
-     (add-column-family test-tbl-name (column-descriptor "test-cf-name2"))
+     (add-column-family test-tbl-name (column-descriptor "cf1"))
+     (add-column-family test-tbl-name (column-descriptor "cf2"))
      (enable-table test-tbl-name)
      (with-table [test-tbl (table test-tbl-name)]
-       (put test-tbl row :values [:test-cf-name1 [:test1qual1 "testval1t1"
-                                                  :test1qual1 "testval1t2"
-                                                  :test1qual1 "testval1t3"]
-                                                  :test2qual2 "testval2t1"
-                                  :test-cf-name2 [:test2qual1 "testval3t1"
-                                                  :test2qual1 "testval3t2"
-                                                  :test2qual2 "testval4t1"
-                                                  :test2qual2 "testval4t2"
-                                                  :test2qual2 "testval4t3"
-                                                  :test2qual3 "testval5t1"]])
+       (put test-tbl row :values [:cf1 [:a "v1t1"
+                                        :a "v1t2"
+                                        :a "v1t3"
+                                        :b "v2t1"]
+                                  :cf2 [:c "v3t1"
+                                        :c "v3t2"
+                                        :d "v4t1"
+                                        :d "v4t2"
+                                        :d "v4t3"
+                                        :e "v5t1"]])
        (is (= rowvalue (test-vector (get test-tbl row)))
-           "Verified all columns were Put in multi-versions with an unqualified row Get.")
-       (delete test-tbl row :all-versions [[:column :test-cf-name1 :test1qual1]])
+           "Verified all columns were Put with an unqualified row Get.")
+       (delete test-tbl row :all-versions [[:column :cf1 :a]])
        (is (= deletev1
-              (test-vector (get test-tbl row :columns
-                                [:test-cf-name1 [:test1qual1 :test1qual2]])))
+              (test-vector (get test-tbl row :family :cf1)))
            "Successfully tested :all-versions [:column cf cq].")
        (delete test-tbl row :all-versions [[:columns
-                                            [:test-cf-name2 :test2qual1]
-                                            [:test-cf-name2 :test2qual2] ]])
+                                            [:cf2 [:c :d]]]])
        (is (= deletev2
-              (test-vector (get test-tbl row :columns
-                                [:test-cf-name2 [:test2qual1 :test2qual2 :test2qual3]])))
+              (test-vector (get test-tbl row :family :cf2)))
            "Successfully tested :all-versions [:columns [cf cq ...]].")
-       (put test-tbl row :values [:test-cf-name1 [:test1qual1 "testval1t4"]])
+       (put test-tbl row :values [:cf1 [:a "final"]])
        (is (= deletev3
-              (test-vector (get test-tbl row :columns
-                                [:test-cf-name1 [:test1qual1]])))
+              (test-vector (get test-tbl row :family :cf1)))
            "Successfully puts a new version after deleting all-versions.")))))
+
 
 (deftest atomic-ops-test
   (let [cf-name "test-cf-name"]
