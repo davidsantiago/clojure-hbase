@@ -516,8 +516,8 @@
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
-   :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
-   :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
+   :with-timestamp        2    ;; :with-timestamp <long> [[:column [...]]]
+   :with-timestamp-before 2    ;; :with-timestamp-before <long> [[:column ...]]
    :all-versions          1    ;; :all-versions [[:column ...]]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1})  ;; :use-existing <a Put you've made>
@@ -591,16 +591,18 @@
                       delete-op family q timestamp)))
         :family (delete-family-timestamp delete-op (second spec) timestamp)
         :families (doseq [f (rest spec)]
-                    (delete-family-timestamp delete-op f timestamp)))
-      :all-versions
-      (condp = (first spec)
-        :column
-        (apply #(delete-columns delete-op %1 %2)
-               (rest spec))
-        :columns (let [[family quals] (rest spec)]
-                   (doseq [q quals]
-                     (delete-columns
-                       delete-op family q)))))))
+                    (delete-family-timestamp delete-op f timestamp))))))
+
+(defn- delete-all-versions
+  [#^Delete delete-op specs]
+  (doseq [spec (first (rest specs))]  ;; first rest, so we are compatible with :with-timestamp
+    (condp = (first spec)
+      :column
+      (apply #(delete-columns delete-op %1 %2) (rest spec))
+      :columns (let [[family quals] (first (rest spec))]
+                 (doseq [q quals]
+                   (delete-columns
+                     delete-op family q))))))
 
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
@@ -614,9 +616,8 @@
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
           :with-timestamp-before (handle-delete-ts delete-op spec)
+          :all-versions          (delete-all-versions delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
-                                        (second spec))
-          :all-versions          (apply #(delete-columns delete-op %1 %2)
                                         (second spec))
           :columns               (apply-columns #(delete-column delete-op %1 %2)
                                                 (second spec))
