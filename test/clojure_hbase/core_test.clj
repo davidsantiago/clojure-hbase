@@ -252,15 +252,17 @@
                                         :e "v5t1"]])
        (is (= rowvalue (test-vector (get test-tbl row)))
            "Verified all columns were Put with an unqualified row Get.")
-       (delete test-tbl row :all-versions [[:column :cf1 :a]])
+       (delete test-tbl row :all-versions [:column :cf1 :a])
        (is (= deletev1
               (test-vector (get test-tbl row :family :cf1)))
            "Successfully tested :all-versions [:column cf cq].")
-       (delete test-tbl row :all-versions [[:columns
-                                            [:cf2 [:c :d]]]])
+       (delete test-tbl row :all-versions [:column :cf1 :b :columns :cf2 [:c :d]])
        (is (= deletev2
               (test-vector (get test-tbl row :family :cf2)))
-           "Successfully tested :all-versions [:columns [cf cq ...]].")
+           "Successfully tested :all-versions [:columns cf [cq ...]] (1/2)")
+       (is (empty?
+              (test-vector (get test-tbl row :family :cf1)))
+           "Successfully tested :all-versions [:columns cf [cq ...]] (2/2)")
        (put test-tbl row :values [:cf1 [:a "final"]])
        (is (= deletev3
               (test-vector (get test-tbl row :family :cf1)))
