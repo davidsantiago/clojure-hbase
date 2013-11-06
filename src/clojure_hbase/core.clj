@@ -518,6 +518,7 @@
    :families              1    ;; :families [:family1 :family2 ...]
    :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
    :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
+   :all-versions          1    ;; :all-versions [[:column ...]]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
@@ -544,6 +545,10 @@
 (defn- delete-column
   [#^Delete delete-op family qualifier]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier)))
+
+(defn- delete-columns
+  [#^Delete delete-op family qualifier]
+  (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier)))
 
 (defn- delete-column-with-timestamp
   [#^Delete delete-op family qualifier timestamp]
@@ -586,7 +591,16 @@
                       delete-op family q timestamp)))
         :family (delete-family-timestamp delete-op (second spec) timestamp)
         :families (doseq [f (rest spec)]
-                    (delete-family-timestamp delete-op f timestamp))))))
+                    (delete-family-timestamp delete-op f timestamp)))
+      :all-versions
+      (condp = (first spec)
+        :column
+        (apply #(delete-columns delete-op %1 %2)
+               (rest spec))
+        :columns (let [[family quals] (rest spec)]
+                   (doseq [q quals]
+                     (delete-columns
+                       delete-op family q)))))))
 
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
@@ -600,6 +614,7 @@
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
           :with-timestamp-before (handle-delete-ts delete-op spec)
+          :all-versions          (handle-delete-ts delete-op spec)
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
           :columns               (apply-columns #(delete-column delete-op %1 %2)
