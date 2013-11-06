@@ -232,8 +232,7 @@
                   [:cf2 :e nil :v5t1]]
         deletev1 [[:cf1 :b nil :v2t1]]
         deletev2 [[:cf2 :e nil :v5t1]]
-        deletev3 [[:cf1 :a nil :final]
-                  [:cf1 :b nil :v2t1]]]
+        deletev3 [[:cf1 :a nil :final]]]
     (as-test
      (disable-table test-tbl-name)
      (add-column-family test-tbl-name (column-descriptor "cf1"))
@@ -255,18 +254,18 @@
        (delete test-tbl row :all-versions [:column :cf1 :a])
        (is (= deletev1
               (test-vector (get test-tbl row :family :cf1)))
-           "Successfully tested :all-versions [:column cf cq].")
+           "Tested :all-versions [:column cf cq].")
        (delete test-tbl row :all-versions [:column :cf1 :b :columns :cf2 [:c :d]])
        (is (= deletev2
               (test-vector (get test-tbl row :family :cf2)))
-           "Successfully tested :all-versions [:columns cf [cq ...]] (1/2)")
+           "Tested :all-versions [:columns cf [cq ...]] (1/2)")
        (is (empty?
               (test-vector (get test-tbl row :family :cf1)))
-           "Successfully tested :all-versions [:columns cf [cq ...]] (2/2)")
+           "Tested :all-versions [:columns cf [cq ...]] (2/2)")
        (put test-tbl row :values [:cf1 [:a "final"]])
        (is (= deletev3
               (test-vector (get test-tbl row :family :cf1)))
-           "Successfully puts a new version after deleting all-versions.")))))
+           "Tested to put a new version after deleting all-versions.")))))
 
 
 (deftest atomic-ops-test
