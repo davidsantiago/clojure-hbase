@@ -7,4 +7,5 @@ classes
 pom.xml
 .lein-deps-sum
 .lein-failures
+.lein-repl-history
 target
