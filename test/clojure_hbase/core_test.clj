@@ -223,6 +223,51 @@
                                  :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
 
+(deftest all-versions-delete
+  (let [row "testrow"
+        rowvalue [[:cf1 :a nil :v1t3]
+                  [:cf1 :b nil :v2t1]
+                  [:cf2 :c nil :v3t2]
+                  [:cf2 :d nil :v4t3]
+                  [:cf2 :e nil :v5t1]]
+        deletev1 [[:cf1 :b nil :v2t1]]
+        deletev2 [[:cf2 :e nil :v5t1]]
+        deletev3 [[:cf1 :a nil :final]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor "cf1"))
+     (add-column-family test-tbl-name (column-descriptor "cf2"))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :values [:cf1 [:a "v1t1"
+                                        :a "v1t2"
+                                        :a "v1t3"
+                                        :b "v2t1"]
+                                  :cf2 [:c "v3t1"
+                                        :c "v3t2"
+                                        :d "v4t1"
+                                        :d "v4t2"
+                                        :d "v4t3"
+                                        :e "v5t1"]])
+       (is (= rowvalue (test-vector (get test-tbl row)))
+           "Verified all columns were Put with an unqualified row Get.")
+       (delete test-tbl row :all-versions [:column :cf1 :a])
+       (is (= deletev1
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested :all-versions [:column cf cq].")
+       (delete test-tbl row :all-versions [:column :cf1 :b :columns :cf2 [:c :d]])
+       (is (= deletev2
+              (test-vector (get test-tbl row :family :cf2)))
+           "Tested :all-versions [:columns cf [cq ...]] (1/2)")
+       (is (empty?
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested :all-versions [:columns cf [cq ...]] (2/2)")
+       (put test-tbl row :values [:cf1 [:a "final"]])
+       (is (= deletev3
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested to put a new version after deleting all-versions.")))))
+
+
 (deftest atomic-ops-test
   (let [cf-name "test-cf-name"]
     (as-test
