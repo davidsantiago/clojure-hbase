@@ -21,6 +21,11 @@
   (as-vector result :map-family keywordize :map-qualifier keywordize
              :map-timestamp (fn [x] nil) :map-value keywordize))
 
+(defn test-vector-ts
+  [result]
+  (as-vector result :map-family keywordize :map-qualifier keywordize
+             :map-value keywordize))
+
 (defn test-map
   [result]
   (latest-as-map result :map-family keywordize :map-qualifier keywordize
@@ -132,6 +137,36 @@
                           (get test-tbl row
                                :time-range [(dec timestamp) (inc timestamp)])))
              "Successfully executed Get :time-range"))
+       ;; Delete the row
+       (delete test-tbl row :column [cf-name :testqual])
+       (is (= '() (as-vector (get test-tbl row :column
+                                  [cf-name :testqual])))
+           "Successfully executed Delete of the Put.")))))
+
+(deftest put-timestamped
+  (let [cf-name "test-cf-name"
+        row     "testrow"
+        timestamp 1337
+        rowvalue   [[:test-cf-name :testqual timestamp :testval]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :with-timestamp timestamp
+            [:value [cf-name :testqual :testval]])
+       (is (= rowvalue
+              (test-vector-ts
+               (get test-tbl row :column
+                    [cf-name :testqual])))
+           "Successfully executed Put :value with timestamp and Get :column.")
+       (is (= rowvalue (test-vector-ts (get test-tbl row
+                                         :time-stamp timestamp)))
+           "Sucessfully executed Get :time-stamp")
+       (is (= rowvalue (test-vector-ts
+                        (get test-tbl row
+                             :time-range [(dec timestamp) (inc timestamp)])))
+           "Successfully executed Get :time-range")
        ;; Delete the row
        (delete test-tbl row :column [cf-name :testqual])
        (is (= '() (as-vector (get test-tbl row :column
