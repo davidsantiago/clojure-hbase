@@ -576,31 +576,31 @@
     [delete-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- delete-column
-  [#^Delete delete-op family qualifier]
+  [^Delete delete-op family qualifier]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier)))
 
 (defn- delete-columns
-  [#^Delete delete-op family qualifier]
+  [^Delete delete-op family qualifier]
   (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier)))
 
 (defn- delete-column-with-timestamp
-  [#^Delete delete-op family qualifier timestamp]
+  [^Delete delete-op family qualifier timestamp]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier) timestamp))
 
 (defn- delete-column-before-timestamp
-  [#^Delete delete-op family qualifier timestamp]
+  [^Delete delete-op family qualifier timestamp]
   (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier) timestamp))
 
 (defn- delete-family
-  [#^Delete delete-op family]
+  [^Delete delete-op family]
   (.deleteFamily delete-op (to-bytes family)))
 
 (defn- delete-family-timestamp
-  [#^Delete delete-op family timestamp]
+  [^Delete delete-op family timestamp]
   (.deleteFamily delete-op (to-bytes family) timestamp))
 
 (defn- handle-delete-ts
-  [#^Delete delete-op ts-specs]
+  [^Delete delete-op ts-specs]
   (doseq [[ts-op timestamp specs] (partition 3 ts-specs)
           spec (partition-query specs delete-argnums)]
     (condp = ts-op
@@ -627,7 +627,7 @@
                     (delete-family-timestamp delete-op f timestamp))))))
 
 (defn- delete-all-versions
-  [#^Delete delete-op specs]
+  [^Delete delete-op specs]
   (doseq [spec (partition 3 specs)]
     (condp = (first spec)
       :column
