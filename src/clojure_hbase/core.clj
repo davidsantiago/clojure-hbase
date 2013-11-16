@@ -628,14 +628,13 @@
 
 (defn- delete-all-versions
   [^Delete delete-op specs]
-  (doseq [spec (partition 3 specs)]
+  (doseq [spec (partition-query specs delete-argnums)]
     (condp = (first spec)
       :column
-      (apply #(delete-columns delete-op %1 %2) (rest spec))
-      :columns (let [[family quals] (rest spec)]
+      (apply #(delete-columns delete-op %1 %2) (first (rest spec)))
+      :columns (let [[family quals] (first (rest spec))]
                  (doseq [q quals]
-                   (delete-columns
-                     delete-op family q))))))
+                   (delete-columns delete-op family q))))))
 
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
