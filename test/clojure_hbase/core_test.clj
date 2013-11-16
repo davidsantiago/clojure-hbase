@@ -302,6 +302,48 @@
               (test-vector (get test-tbl row :family :cf1)))
            "Tested to put a new version after deleting all-versions.")))))
 
+(deftest with-timestamp-delete
+  (let [row "testrow"
+        rowvalue [[:cf1 :a 1 :v1]
+                  [:cf1 :b 2 :v2]
+                  [:cf1 :c 3 :v3]
+                  [:cf2 :d 4 :v4]
+                  [:cf2 :e 5 :v5]
+                  [:cf2 :f 6 :v6]]
+        deleted-t4 [[:cf1 :a 1 :v1]
+                    [:cf1 :b 2 :v2]
+                    [:cf1 :c 3 :v3]
+                    [:cf2 :e 5 :v5]
+                    [:cf2 :f 6 :v6]]
+        deleted-before-t4 [[:cf1 :a 1 :v1]
+                           [:cf2 :e 5 :v5]
+                           [:cf2 :f 6 :v6]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor "cf1"))
+     (add-column-family test-tbl-name (column-descriptor "cf2"))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row
+            :with-timestamp 1 [:value [:cf1 :a :v1]]
+            :with-timestamp 2 [:value [:cf1 :b :v2]]
+            :with-timestamp 3 [:value [:cf1 :c :v3]]
+            :with-timestamp 4 [:value [:cf2 :d :v4]]
+            :with-timestamp 5 [:value [:cf2 :e :v5]]
+            :with-timestamp 6 [:value [:cf2 :f :v6]])
+       (is (= rowvalue (test-vector-ts (get test-tbl row)))
+           "Verified all columns were Put with an unqualified row Get.")
+       (delete test-tbl row :with-timestamp 4 [:column [:cf2 :d]
+                                               :columns [:cf1 [:a :b]]])
+       (is (= deleted-t4
+              (test-vector-ts (get test-tbl row)))
+           "Tested delete :with-timestamp.")
+       (delete test-tbl row :with-timestamp-before 4
+               [:columns [:cf1 [:b :c]]
+                :column [:cf2 :e]])
+       (is (= deleted-before-t4
+              (test-vector-ts (get test-tbl row :families [:cf1 :cf2])))
+           "Tested delete :with-timestamp-before.")))))
 
 (deftest atomic-ops-test
   (let [cf-name "test-cf-name"]

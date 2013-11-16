@@ -548,9 +548,10 @@
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
-   :with-timestamp        2    ;; :with-timestamp <long> [[:column [...]]]
-   :with-timestamp-before 2    ;; :with-timestamp-before <long> [[:column ...]]
-   :all-versions          1    ;; :all-versions [:column :cf :cq :columns :cf [...]]
+   :with-timestamp        2    ;; :with-timestamp <long> [:column [...] ...]
+   :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column [...] ...]
+   :all-versions          1    ;; :all-versions [:column [:cf :cq]
+                               ;;                :columns [:cf [...]] ...]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
@@ -601,23 +602,23 @@
 (defn- handle-delete-ts
   [#^Delete delete-op ts-specs]
   (doseq [[ts-op timestamp specs] (partition 3 ts-specs)
-          spec specs]
+          spec (partition-query specs delete-argnums)]
     (condp = ts-op
-        :with-timestamp
+      :with-timestamp
       (condp = (first spec)
-          :column
+        :column
         (apply #(delete-column-with-timestamp delete-op %1 %2 timestamp)
-               (rest spec))
-        :columns (let [[family quals] (rest spec)]
+               (first (rest spec)))
+        :columns (let [[family quals] (first (rest spec))]
                    (doseq [q quals]
                      (delete-column-with-timestamp
-                       delete-op family q timestamp))))
+                      delete-op family q timestamp))))
       :with-timestamp-before
       (condp = (first spec)
-          :column
+        :column
         (apply #(delete-column-before-timestamp delete-op %1 %2 timestamp)
-               (rest spec))
-        :columns (let [[family quals] (rest spec)]
+               (first (rest spec)))
+        :columns (let [[family quals] (first (rest spec))]
                    (doseq [q quals]
                      (delete-column-before-timestamp
                       delete-op family q timestamp)))
