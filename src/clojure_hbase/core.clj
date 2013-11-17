@@ -416,6 +416,8 @@
 (def ^{:private true} put-argnums
   {:value        1    ;; :value [:family :column <value>]
    :values       1    ;; :values [:family [:column1 value1 ...] ...]
+   :with-timestamp 2  ;; :with-timestamp ts [:value [:family ...] ...],
+                      ;;  any number of :value or :values nested
    :write-to-WAL 1    ;; :write-to-WAL true/false
    :row-lock     1    ;; :row-lock <a row lock you've got>
    :use-existing 1})  ;; :use-existing <a Put you've made>
@@ -439,17 +441,46 @@
                       (new Put row))]
     [put-obj (filter #(not (contains? directives (first %))) options)]))
 
+;; Separate functions for -ts variants, despite code duplication, are
+;; to call the functions in a way that lets the server determine the
+;; timestamp when there is none specified. Seems the less surprising
+;; behavior.
+
 (defn- put-add
-  [#^Put put-op family qualifier value]
+  [^Put put-op family qualifier value]
   (.add put-op (to-bytes family) (to-bytes qualifier) (to-bytes value)))
 
+(defn- put-add-ts
+  [^Put put-op ts family qualifier value]
+  (.add put-op (to-bytes family) (to-bytes qualifier) ts (to-bytes value)))
+
 (defn- handle-put-values
-  [#^Put put-op values]
+  [^Put put-op values]
   (doseq [value (partition 2 values)]
     (let [[family qv-pairs] value]
       (doseq [[q v] (partition 2 qv-pairs)]
         (put-add put-op family q v))))
   put-op)
+
+(defn- handle-put-values-ts
+  [^Put put-op ts values]
+  (doseq [value (partition 2 values)]
+    (let [[family qv-pairs] value]
+      (doseq [[q v] (partition 2 qv-pairs)]
+        (put-add-ts put-op ts family q v))))
+  put-op)
+
+(defn- handle-put-with-ts
+  "Expects spec to be of the form [:with-timestamp ts [...]], where the ellipses
+   are any number of :value or :values specs."
+  [^Put put-op spec]
+  (let [[_ ts sub-specs] spec
+        sub-specs (partition-query sub-specs put-argnums)]
+    (doseq [sub-spec sub-specs]
+      (condp = (first sub-spec)
+        :value (apply put-add-ts put-op ts (second sub-spec))
+        :values (apply handle-put-values-ts put-op ts (second sub-spec))))
+    put-op))
 
 (defn put*
   "Returns a Put object suitable for performing a put on an HTable. To make
@@ -458,19 +489,20 @@
    :row-lock."
   [row & args]
   (let [specs  (partition-query args put-argnums)
-        [#^Put put-op specs] (make-put row specs)]
+        [^Put put-op specs] (make-put row specs)]
     (doseq [spec specs]
       (condp = (first spec)
           :value          (apply put-add put-op (second spec))
           :values         (handle-put-values put-op (second spec))
+          :with-timestamp (handle-put-with-ts put-op spec)
           :write-to-WAL   (.setWriteToWAL put-op (second spec))))
     put-op))
 
 (defn put
   "Creates and executes a Put object against the given table. Options are
    the same as for put."
-  [#^HTableInterface table row & args]
-  (let [p #^Put (apply put* row args)]
+  [^HTableInterface table row & args]
+  (let [p ^Put (apply put* row args)]
     (io!
      (.put table p))))
 
@@ -516,8 +548,10 @@
    :columns               1    ;; :columns [:family-name [:q1 :q2...]...]
    :family                1    ;; :family :family-name
    :families              1    ;; :families [:family1 :family2 ...]
-   :with-timestamp        2    ;; :with-timestamp <long> [:column [...]
-   :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column ...]
+   :with-timestamp        2    ;; :with-timestamp <long> [:column [...] ...]
+   :with-timestamp-before 2    ;; :with-timestamp-before <long> [:column [...] ...]
+   :all-versions          1    ;; :all-versions [:column [:cf :cq]
+                               ;;                :columns [:cf [...]] ...]
    :row-lock              1    ;; :row-lock <a row lock you've got>
    :use-existing          1})  ;; :use-existing <a Put you've made>
 
@@ -542,51 +576,65 @@
     [delete-obj (filter #(not (contains? directives (first %))) options)]))
 
 (defn- delete-column
-  [#^Delete delete-op family qualifier]
+  [^Delete delete-op family qualifier]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier)))
 
+(defn- delete-columns
+  [^Delete delete-op family qualifier]
+  (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier)))
+
 (defn- delete-column-with-timestamp
-  [#^Delete delete-op family qualifier timestamp]
+  [^Delete delete-op family qualifier timestamp]
   (.deleteColumn delete-op (to-bytes family) (to-bytes qualifier) timestamp))
 
 (defn- delete-column-before-timestamp
-  [#^Delete delete-op family qualifier timestamp]
+  [^Delete delete-op family qualifier timestamp]
   (.deleteColumns delete-op (to-bytes family) (to-bytes qualifier) timestamp))
 
 (defn- delete-family
-  [#^Delete delete-op family]
+  [^Delete delete-op family]
   (.deleteFamily delete-op (to-bytes family)))
 
 (defn- delete-family-timestamp
-  [#^Delete delete-op family timestamp]
+  [^Delete delete-op family timestamp]
   (.deleteFamily delete-op (to-bytes family) timestamp))
 
 (defn- handle-delete-ts
-  [#^Delete delete-op ts-specs]
+  [^Delete delete-op ts-specs]
   (doseq [[ts-op timestamp specs] (partition 3 ts-specs)
-          spec specs]
+          spec (partition-query specs delete-argnums)]
     (condp = ts-op
-        :with-timestamp
+      :with-timestamp
       (condp = (first spec)
-          :column
+        :column
         (apply #(delete-column-with-timestamp delete-op %1 %2 timestamp)
-               (rest spec))
-        :columns (let [[family quals] (rest spec)]
+               (first (rest spec)))
+        :columns (let [[family quals] (first (rest spec))]
                    (doseq [q quals]
                      (delete-column-with-timestamp
-                       delete-op family q timestamp))))
+                      delete-op family q timestamp))))
       :with-timestamp-before
       (condp = (first spec)
-          :column
+        :column
         (apply #(delete-column-before-timestamp delete-op %1 %2 timestamp)
-               (rest spec))
-        :columns (let [[family quals] (rest spec)]
+               (first (rest spec)))
+        :columns (let [[family quals] (first (rest spec))]
                    (doseq [q quals]
                      (delete-column-before-timestamp
                       delete-op family q timestamp)))
         :family (delete-family-timestamp delete-op (second spec) timestamp)
         :families (doseq [f (rest spec)]
                     (delete-family-timestamp delete-op f timestamp))))))
+
+(defn- delete-all-versions
+  [^Delete delete-op specs]
+  (doseq [spec (partition-query specs delete-argnums)]
+    (condp = (first spec)
+      :column
+      (apply #(delete-columns delete-op %1 %2) (first (rest spec)))
+      :columns (let [[family quals] (first (rest spec))]
+                 (doseq [q quals]
+                   (delete-columns delete-op family q))))))
 
 (defn delete*
   "Returns a Delete object suitable for performing a delete on an HTable. To
@@ -600,6 +648,7 @@
       (condp = (first spec)
           :with-timestamp        (handle-delete-ts delete-op spec)
           :with-timestamp-before (handle-delete-ts delete-op spec)
+          :all-versions          (delete-all-versions delete-op (second spec))
           :column                (apply #(delete-column delete-op %1 %2)
                                         (second spec))
           :columns               (apply-columns #(delete-column delete-op %1 %2)

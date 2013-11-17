@@ -21,6 +21,11 @@
   (as-vector result :map-family keywordize :map-qualifier keywordize
              :map-timestamp (fn [x] nil) :map-value keywordize))
 
+(defn test-vector-ts
+  [result]
+  (as-vector result :map-family keywordize :map-qualifier keywordize
+             :map-value keywordize))
+
 (defn test-map
   [result]
   (latest-as-map result :map-family keywordize :map-qualifier keywordize
@@ -138,6 +143,36 @@
                                   [cf-name :testqual])))
            "Successfully executed Delete of the Put.")))))
 
+(deftest put-timestamped
+  (let [cf-name "test-cf-name"
+        row     "testrow"
+        timestamp 1337
+        rowvalue   [[:test-cf-name :testqual timestamp :testval]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor cf-name))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :with-timestamp timestamp
+            [:value [cf-name :testqual :testval]])
+       (is (= rowvalue
+              (test-vector-ts
+               (get test-tbl row :column
+                    [cf-name :testqual])))
+           "Successfully executed Put :value with timestamp and Get :column.")
+       (is (= rowvalue (test-vector-ts (get test-tbl row
+                                         :time-stamp timestamp)))
+           "Sucessfully executed Get :time-stamp")
+       (is (= rowvalue (test-vector-ts
+                        (get test-tbl row
+                             :time-range [(dec timestamp) (inc timestamp)])))
+           "Successfully executed Get :time-range")
+       ;; Delete the row
+       (delete test-tbl row :column [cf-name :testqual])
+       (is (= '() (as-vector (get test-tbl row :column
+                                  [cf-name :testqual])))
+           "Successfully executed Delete of the Put.")))))
+
 (deftest construction-options-test
  (let [cf-name "test-cf-name"
         row     "testrow"
@@ -222,6 +257,94 @@
                                 [:test-cf-name1 [:test1qual1 :test1qual2]
                                  :test-cf-name2 [:test2qual1 :test2qual2]])))
            "Successfully executed Delete of multiple cols using :columns.")))))
+
+(deftest all-versions-delete
+  (let [row "testrow"
+        rowvalue [[:cf1 :a nil :v1t3]
+                  [:cf1 :b nil :v2t1]
+                  [:cf2 :c nil :v3t2]
+                  [:cf2 :d nil :v4t3]
+                  [:cf2 :e nil :v5t1]]
+        deletev1 [[:cf1 :b nil :v2t1]]
+        deletev2 [[:cf2 :e nil :v5t1]]
+        deletev3 [[:cf1 :a nil :final]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor "cf1"))
+     (add-column-family test-tbl-name (column-descriptor "cf2"))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row :values [:cf1 [:a "v1t1"
+                                        :a "v1t2"
+                                        :a "v1t3"
+                                        :b "v2t1"]
+                                  :cf2 [:c "v3t1"
+                                        :c "v3t2"
+                                        :d "v4t1"
+                                        :d "v4t2"
+                                        :d "v4t3"
+                                        :e "v5t1"]])
+       (is (= rowvalue (test-vector (get test-tbl row)))
+           "Verified all columns were Put with an unqualified row Get.")
+       (delete test-tbl row :all-versions [:column [:cf1 :a]])
+       (is (= deletev1
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested :all-versions [:column [cf cq]].")
+       (delete test-tbl row :all-versions [:column [:cf1 :b]
+                                           :columns [:cf2 [:c :d]]])
+       (is (= deletev2
+              (test-vector (get test-tbl row :family :cf2)))
+           "Tested :all-versions [:columns [cf [cq ...]]] (1/2)")
+       (is (empty?
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested :all-versions [:columns [cf [cq ...]]] (2/2)")
+       (put test-tbl row :values [:cf1 [:a "final"]])
+       (is (= deletev3
+              (test-vector (get test-tbl row :family :cf1)))
+           "Tested to put a new version after deleting all-versions.")))))
+
+(deftest with-timestamp-delete
+  (let [row "testrow"
+        rowvalue [[:cf1 :a 1 :v1]
+                  [:cf1 :b 2 :v2]
+                  [:cf1 :c 3 :v3]
+                  [:cf2 :d 4 :v4]
+                  [:cf2 :e 5 :v5]
+                  [:cf2 :f 6 :v6]]
+        deleted-t4 [[:cf1 :a 1 :v1]
+                    [:cf1 :b 2 :v2]
+                    [:cf1 :c 3 :v3]
+                    [:cf2 :e 5 :v5]
+                    [:cf2 :f 6 :v6]]
+        deleted-before-t4 [[:cf1 :a 1 :v1]
+                           [:cf2 :e 5 :v5]
+                           [:cf2 :f 6 :v6]]]
+    (as-test
+     (disable-table test-tbl-name)
+     (add-column-family test-tbl-name (column-descriptor "cf1"))
+     (add-column-family test-tbl-name (column-descriptor "cf2"))
+     (enable-table test-tbl-name)
+     (with-table [test-tbl (table test-tbl-name)]
+       (put test-tbl row
+            :with-timestamp 1 [:value [:cf1 :a :v1]]
+            :with-timestamp 2 [:value [:cf1 :b :v2]]
+            :with-timestamp 3 [:value [:cf1 :c :v3]]
+            :with-timestamp 4 [:value [:cf2 :d :v4]]
+            :with-timestamp 5 [:value [:cf2 :e :v5]]
+            :with-timestamp 6 [:value [:cf2 :f :v6]])
+       (is (= rowvalue (test-vector-ts (get test-tbl row)))
+           "Verified all columns were Put with an unqualified row Get.")
+       (delete test-tbl row :with-timestamp 4 [:column [:cf2 :d]
+                                               :columns [:cf1 [:a :b]]])
+       (is (= deleted-t4
+              (test-vector-ts (get test-tbl row)))
+           "Tested delete :with-timestamp.")
+       (delete test-tbl row :with-timestamp-before 4
+               [:columns [:cf1 [:b :c]]
+                :column [:cf2 :e]])
+       (is (= deleted-before-t4
+              (test-vector-ts (get test-tbl row :families [:cf1 :cf2])))
+           "Tested delete :with-timestamp-before.")))))
 
 (deftest atomic-ops-test
   (let [cf-name "test-cf-name"]
