@@ -8,13 +8,13 @@
            [org.apache.hadoop.hbase.util Bytes]
            [org.apache.hadoop.hbase.io.hfile Compression]))
 
-(def ^{:tag HBaseAdmin :dynamic true} *admin*
+(def ^{:tag HBaseConfiguration :dynamic true} *admin-config*
   (atom nil))
 
 (defn hbase-admin ^HBaseAdmin []
-  (when-not @*admin*
-    (swap! *admin* #(or % (HBaseAdmin. (HBaseConfiguration/create)))))
-  @*admin*)
+  (when-not @*admin-config*
+    -(swap! *admin-config* #(or % (HBaseConfiguration/create))))
+  (HBaseAdmin. @*admin-config*))
 
 (defn set-admin-config
   "Resets the *admin* atom to a new HBaseAdmin object that uses the
@@ -25,7 +25,7 @@
                 {\"hbase.zookeeper.dns.interface\" \"lo\"
                  :hbase.zookeeper.quorum \"127.0.0.1\"})"
   [^HBaseConfiguration config-obj]
-  (reset! *admin* (HBaseAdmin. config-obj)))
+  (reset! *admin-config* config-obj))
 
 ;;
 ;; HColumnDescriptor

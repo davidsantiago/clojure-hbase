@@ -164,6 +164,8 @@ version I've tested against, but earlier ones may still work.
 
 ## Lately...
 
+- Update to version 0.92.4. Makes the HBaseAdmin object short-lived, which should make the API work across master resets. Patch by [gibbonsd1](https://github.com/gibbonsd1).
+
 - Update to version 0.92.3. Tested against 0.92 and 0.94 HBase. Adds an :all-versions variant to the delete function, which deletes all versions of a cell, patch by [Lin Zhemin](https://github.com/miaoski). Also fixes a bug in the :with-timestamp and :with-timestamp-before variants of delete, which parsed the arguments incorrectly. Finally, adds a :with-timestamp variant of put, which allows the insertion of an element with a specific timestamp. Unit tests expanded.
 
 - Update to version 0.92.2. Tested against 0.92 and 0.94 HBase. Updates library to work properly with Clojure 1.5. Add check-and-delete operation, patch by [Kris Jenkins](https://github.com/krisajenkins). to-bytes is deprecated as a public function. Deprecate `modify` and `query` in favor of `execute`, which they are both now implemented in terms of. Other bug fixes and unit tests added.
