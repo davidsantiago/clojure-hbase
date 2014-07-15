@@ -13,7 +13,7 @@
 
 (defn hbase-admin ^HBaseAdmin []
   (when-not @*admin-config*
-    -(swap! *admin-config* #(or % (HBaseConfiguration/create))))
+    (swap! *admin-config* #(or % (HBaseConfiguration/create))))
   (HBaseAdmin. @*admin-config*))
 
 (defn set-admin-config
